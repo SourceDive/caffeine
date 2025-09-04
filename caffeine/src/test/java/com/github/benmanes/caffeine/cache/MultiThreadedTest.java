@@ -163,7 +163,7 @@ public final class MultiThreadedTest {
           key -> { asyncCache.asMap().putAll(Map.of(key, completedFuture(null))); },
           key -> { asyncCache.asMap().putIfAbsent(key, completedFuture(null)); },
           key -> { asyncCache.asMap().remove(key); },
-          key -> { asyncCache.asMap().remove(key, key); },
+          key -> { asyncCache.asMap().remove(key, completedFuture(null)); },
           key -> { asyncCache.asMap().replace(key, completedFuture(null)); },
           key -> { asyncCache.asMap().computeIfAbsent(key, k -> completedFuture(null)); },
           key -> { asyncCache.asMap().computeIfPresent(key, (k, v) -> v); },
