@@ -22,9 +22,10 @@ test {
   useTestNG()
 }
 
-bundle {
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.cache.simulator'
-}
+// Bundle plugin disabled for source reading
+// bundle {
+//   instruction 'Export-Package', 'com.github.benmanes.caffeine.cache.simulator'
+// }
 
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')

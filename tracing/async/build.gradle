@@ -14,6 +14,7 @@ test {
   useTestNG()
 }
 
-bundle {
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.cache.tracing.async.*'
-}
+// Bundle plugin disabled for source reading
+// bundle {
+//   instruction 'Export-Package', 'com.github.benmanes.caffeine.cache.tracing.async.*'
+// }

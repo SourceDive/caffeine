@@ -12,6 +12,7 @@ test {
   systemProperty 'caffeine.tracing.enabled', 'true'
 }
 
-bundle {
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.cache.tracing.*'
-}
+// Bundle plugin disabled for source reading
+// bundle {
+//   instruction 'Export-Package', 'com.github.benmanes.caffeine.cache.tracing.*'
+// }

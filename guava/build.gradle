@@ -15,9 +15,10 @@ dependencies {
   testCompile test_libraries.easymock
 }
 
-bundle {
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.guava.*'
-}
+// Bundle plugin disabled for source reading
+// bundle {
+//   instruction 'Export-Package', 'com.github.benmanes.caffeine.guava.*'
+// }
 
 tasks.withType(Javadoc) {
   options.addStringOption('Xdoclint:none', '-quiet')

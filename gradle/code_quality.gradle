@@ -70,7 +70,8 @@ tasks.withType(Test) {
   jacoco {
     append = true
     destinationFile = file("${rootDir}/build/jacoco/jacocoTest.exec")
-    classDumpFile = file("${rootDir}/build/jacoco/classpathdumps")
+    // classDumpFile is not supported in Gradle 4.5's JaCoCo plugin
+    // classDumpFile = file("${rootDir}/build/jacoco/classpathdumps")
   }
 }
 

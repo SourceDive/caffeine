@@ -44,10 +44,11 @@ dependencies {
   javaPoetCompile libraries.javapoet
 }
 
-bundle {
-  instruction 'Import-Package', 'sun.misc.*;resolution:=optional'
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.*'
-}
+// Bundle plugin disabled for source reading
+// bundle {
+//   instruction 'Import-Package', 'sun.misc.*;resolution:=optional'
+//   instruction 'Export-Package', 'com.github.benmanes.caffeine.*'
+// }
 
 task generateLocalCaches(type: JavaExec) {
   main = 'com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator'

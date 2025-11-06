@@ -22,9 +22,10 @@ dependencies {
   }
 }
 
-bundle {
-  instruction 'Export-Package', 'com.github.benmanes.caffeine.jcache.*'
-}
+// Bundle plugin disabled for source reading
+// bundle {
+//   instruction 'Export-Package', 'com.github.benmanes.caffeine.jcache.*'
+// }
 
 test {
   useTestNG()
