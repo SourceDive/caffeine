@@ -15,26 +15,22 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static com.github.benmanes.caffeine.cache.IsValidAsyncCache.validAsyncCache;
-import static com.github.benmanes.caffeine.cache.IsValidCache.validCache;
-import static com.github.benmanes.caffeine.cache.IsValidMapView.validAsMap;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasHitCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadFailureCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasLoadSuccessCount;
-import static com.github.benmanes.caffeine.cache.testing.HasStats.hasMissCount;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.Cache;
+import org.testng.IInvokedMethod;
+import org.testng.IInvokedMethodListener;
+import org.testng.ITestResult;
 
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Objects;
 
-import org.testng.IInvokedMethod;
-import org.testng.IInvokedMethodListener;
-import org.testng.ITestResult;
-
-import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import com.github.benmanes.caffeine.cache.Cache;
+import static com.github.benmanes.caffeine.cache.IsValidAsyncCache.validAsyncCache;
+import static com.github.benmanes.caffeine.cache.IsValidCache.validCache;
+import static com.github.benmanes.caffeine.cache.IsValidMapView.validAsMap;
+import static com.github.benmanes.caffeine.cache.testing.HasStats.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 /**
  * A listener that validates the internal structure after a successful test execution.
@@ -43,55 +39,58 @@ import com.github.benmanes.caffeine.cache.Cache;
  */
 public final class CacheValidationListener implements IInvokedMethodListener {
 
-  @Override
-  public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {}
-
-  @Override
-  public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
-    Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
-    boolean checkNoStats = testMethod.isAnnotationPresent(CheckNoStats.class);
-    try {
-      if (testResult.isSuccess()) {
-        for (Object param : testResult.getParameters()) {
-          if (param instanceof Cache<?, ?>) {
-            assertThat((Cache<?, ?>) param, is(validCache()));
-          } else if (param instanceof AsyncLoadingCache<?, ?>) {
-            assertThat((AsyncLoadingCache<?, ?>) param, is(validAsyncCache()));
-          } else if (param instanceof Map<?, ?>) {
-            assertThat((Map<?, ?>) param, is(validAsMap()));
-          } else if (checkNoStats && (param instanceof CacheContext)) {
-            checkNoStats = false;
-            CacheContext context = (CacheContext) param;
-            assertThat(context, hasHitCount(0));
-            assertThat(context, hasMissCount(0));
-            assertThat(context, hasLoadSuccessCount(0));
-            assertThat(context, hasLoadFailureCount(0));
-          }
-        }
-        if (checkNoStats) {
-          throw new AssertionError("Test requires CacheContext param for validation");
-        }
-      }
-    } catch (AssertionError caught) {
-      testResult.setStatus(ITestResult.FAILURE);
-      testResult.setThrowable(caught);
-    } finally {
-      cleanUp(testResult);
+    @Override
+    public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
     }
-  }
 
-  /** Free memory by clearing unused resources after test execution. */
-  private void cleanUp(ITestResult testResult) {
-    Object[] params = testResult.getParameters();
-    for (int i = 0; i < params.length; i++) {
-      Object param = params[i];
-      if ((param instanceof AsyncLoadingCache<?, ?>) || (param instanceof Cache<?, ?>)
-          || (param instanceof Map<?, ?>)) {
-        params[i] = param.getClass().getSimpleName();
-      } else {
-        params[i] = Objects.toString(param);
-      }
+    @Override
+    public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
+        Method testMethod = testResult.getMethod().getConstructorOrMethod().getMethod();
+        boolean checkNoStats = testMethod.isAnnotationPresent(CheckNoStats.class);
+        try {
+            if (testResult.isSuccess()) {
+                for (Object param : testResult.getParameters()) {
+                    if (param instanceof Cache<?, ?>) {
+                        assertThat((Cache<?, ?>) param, is(validCache()));
+                    } else if (param instanceof AsyncLoadingCache<?, ?>) {
+                        assertThat((AsyncLoadingCache<?, ?>) param, is(validAsyncCache()));
+                    } else if (param instanceof Map<?, ?>) {
+                        assertThat((Map<?, ?>) param, is(validAsMap()));
+                    } else if (checkNoStats && (param instanceof CacheContext)) {
+                        checkNoStats = false;
+                        CacheContext context = (CacheContext) param;
+                        assertThat(context, hasHitCount(0));
+                        assertThat(context, hasMissCount(0));
+                        assertThat(context, hasLoadSuccessCount(0));
+                        assertThat(context, hasLoadFailureCount(0));
+                    }
+                }
+                if (checkNoStats) {
+                    throw new AssertionError("Test requires CacheContext param for validation");
+                }
+            }
+        } catch (AssertionError caught) {
+            testResult.setStatus(ITestResult.FAILURE);
+            testResult.setThrowable(caught);
+        } finally {
+            cleanUp(testResult);
+        }
     }
-    CacheSpec.interner.remove();
-  }
+
+    /**
+     * Free memory by clearing unused resources after test execution.
+     */
+    private void cleanUp(ITestResult testResult) {
+        Object[] params = testResult.getParameters();
+        for (int i = 0; i < params.length; i++) {
+            Object param = params[i];
+            if ((param instanceof AsyncLoadingCache<?, ?>) || (param instanceof Cache<?, ?>)
+                    || (param instanceof Map<?, ?>)) {
+                params[i] = param.getClass().getSimpleName();
+            } else {
+                params[i] = Objects.toString(param);
+            }
+        }
+        CacheSpec.interner.remove();
+    }
 }

@@ -21,70 +21,70 @@ import com.squareup.javapoet.CodeBlock;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class NodeSelectorCode {
-  private final CodeBlock.Builder name;
+    private final CodeBlock.Builder name;
 
-  private NodeSelectorCode() {
-    name = CodeBlock.builder()
-        .addStatement("$T sb = new $T()", StringBuilder.class, StringBuilder.class);
-  }
+    private NodeSelectorCode() {
+        name = CodeBlock.builder()
+                .addStatement("$T sb = new $T()", StringBuilder.class, StringBuilder.class);
+    }
 
-  private NodeSelectorCode keys() {
-    name.beginControlFlow("if (strongKeys)")
-            .addStatement("sb.append('S')")
-        .nextControlFlow("else")
-            .addStatement("sb.append('W')")
-        .endControlFlow();
-    return this;
-  }
-
-  private NodeSelectorCode values() {
-    name.beginControlFlow("if (strongValues)")
-            .addStatement("sb.append(\"St\")")
-        .nextControlFlow("else if (weakValues)")
-            .addStatement("sb.append('W')")
-        .nextControlFlow("else")
-            .addStatement("sb.append(\"So\")")
-        .endControlFlow();
-    return this;
-  }
-
-  private NodeSelectorCode expires() {
-    name.beginControlFlow("if (expiresAfterAccess)")
-            .addStatement("sb.append('A')")
-        .endControlFlow()
-        .beginControlFlow("if (expiresAfterWrite)")
-            .addStatement("sb.append('W')")
-        .endControlFlow()
-        .beginControlFlow("if (refreshAfterWrite)")
-            .addStatement("sb.append('R')")
-        .endControlFlow();
-    return this;
-  }
-
-  private NodeSelectorCode maximum() {
-    name.beginControlFlow("if (maximumSize)")
-            .addStatement("sb.append('M')")
-            .beginControlFlow("if (weighed)")
-                .addStatement("sb.append('W')")
-            .nextControlFlow("else")
+    private NodeSelectorCode keys() {
+        name.beginControlFlow("if (strongKeys)")
                 .addStatement("sb.append('S')")
-            .endControlFlow()
-        .endControlFlow();
-    return this;
-  }
+                .nextControlFlow("else")
+                .addStatement("sb.append('W')")
+                .endControlFlow();
+        return this;
+    }
 
-  private CodeBlock build() {
-    return name
-        .addStatement("return valueOf(sb.toString())")
-        .build();
-  }
+    private NodeSelectorCode values() {
+        name.beginControlFlow("if (strongValues)")
+                .addStatement("sb.append(\"St\")")
+                .nextControlFlow("else if (weakValues)")
+                .addStatement("sb.append('W')")
+                .nextControlFlow("else")
+                .addStatement("sb.append(\"So\")")
+                .endControlFlow();
+        return this;
+    }
 
-  public static CodeBlock get() {
-    return new NodeSelectorCode()
-        .keys()
-        .values()
-        .expires()
-        .maximum()
-        .build();
-  }
+    private NodeSelectorCode expires() {
+        name.beginControlFlow("if (expiresAfterAccess)")
+                .addStatement("sb.append('A')")
+                .endControlFlow()
+                .beginControlFlow("if (expiresAfterWrite)")
+                .addStatement("sb.append('W')")
+                .endControlFlow()
+                .beginControlFlow("if (refreshAfterWrite)")
+                .addStatement("sb.append('R')")
+                .endControlFlow();
+        return this;
+    }
+
+    private NodeSelectorCode maximum() {
+        name.beginControlFlow("if (maximumSize)")
+                .addStatement("sb.append('M')")
+                .beginControlFlow("if (weighed)")
+                .addStatement("sb.append('W')")
+                .nextControlFlow("else")
+                .addStatement("sb.append('S')")
+                .endControlFlow()
+                .endControlFlow();
+        return this;
+    }
+
+    private CodeBlock build() {
+        return name
+                .addStatement("return valueOf(sb.toString())")
+                .build();
+    }
+
+    public static CodeBlock get() {
+        return new NodeSelectorCode()
+                .keys()
+                .values()
+                .expires()
+                .maximum()
+                .build();
+    }
 }

@@ -15,89 +15,92 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Deque;
+import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
 
 import javax.annotation.concurrent.NotThreadSafe;
-
-import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
+import java.util.Deque;
 
 /**
  * A linked deque implementation used to represent a write-order queue.
  *
- * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection
+ * @author ben.manes@gmail.com (Ben Manes)
  */
 @NotThreadSafe
 final class WriteOrderDeque<E extends WriteOrder<E>> extends AbstractLinkedDeque<E> {
 
-  @Override
-  public boolean contains(Object o) {
-    return (o instanceof WriteOrder<?>) && contains((WriteOrder<?>) o);
-  }
-
-  // A fast-path containment check
-  boolean contains(WriteOrder<?> e) {
-    return (e.getPreviousInWriteOrder() != null)
-        || (e.getNextInWriteOrder() != null)
-        || (e == first);
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public boolean remove(Object o) {
-    return (o instanceof WriteOrder<?>) && remove((E) o);
-  }
-
-  // A fast-path removal
-  public boolean remove(E e) {
-    if (contains(e)) {
-      unlink(e);
-      return true;
+    @Override
+    public boolean contains(Object o) {
+        return (o instanceof WriteOrder<?>) && contains((WriteOrder<?>) o);
     }
-    return false;
-  }
 
-  @Override
-  public E getPrevious(E e) {
-    return e.getPreviousInWriteOrder();
-  }
+    // A fast-path containment check
+    boolean contains(WriteOrder<?> e) {
+        return (e.getPreviousInWriteOrder() != null)
+                || (e.getNextInWriteOrder() != null)
+                || (e == first);
+    }
 
-  @Override
-  public void setPrevious(E e, E prev) {
-    e.setPreviousInWriteOrder(prev);
-  }
+    @Override
+    @SuppressWarnings("unchecked")
+    public boolean remove(Object o) {
+        return (o instanceof WriteOrder<?>) && remove((E) o);
+    }
 
-  @Override
-  public E getNext(E e) {
-    return e.getNextInWriteOrder();
-  }
+    // A fast-path removal
+    public boolean remove(E e) {
+        if (contains(e)) {
+            unlink(e);
+            return true;
+        }
+        return false;
+    }
 
-  @Override
-  public void setNext(E e, E next) {
-    e.setNextInWriteOrder(next);
-  }
+    @Override
+    public E getPrevious(E e) {
+        return e.getPreviousInWriteOrder();
+    }
 
-  /**
-   * An element that is linked on the {@link Deque}.
-   */
-  interface WriteOrder<T extends WriteOrder<T>> {
+    @Override
+    public void setPrevious(E e, E prev) {
+        e.setPreviousInWriteOrder(prev);
+    }
+
+    @Override
+    public E getNext(E e) {
+        return e.getNextInWriteOrder();
+    }
+
+    @Override
+    public void setNext(E e, E next) {
+        e.setNextInWriteOrder(next);
+    }
 
     /**
-     * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
-     * element on the deque.
+     * An element that is linked on the {@link Deque}.
      */
-    T getPreviousInWriteOrder();
+    interface WriteOrder<T extends WriteOrder<T>> {
 
-    /** Sets the previous element or <tt>null</tt> if there is no link. */
-    void setPreviousInWriteOrder(T prev);
+        /**
+         * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
+         * element on the deque.
+         */
+        T getPreviousInWriteOrder();
 
-    /**
-     * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
-     * element on the deque.
-     */
-    T getNextInWriteOrder();
+        /**
+         * Sets the previous element or <tt>null</tt> if there is no link.
+         */
+        void setPreviousInWriteOrder(T prev);
 
-    /** Sets the next element or <tt>null</tt> if there is no link. */
-    void setNextInWriteOrder(T next);
-  }
+        /**
+         * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
+         * element on the deque.
+         */
+        T getNextInWriteOrder();
+
+        /**
+         * Sets the next element or <tt>null</tt> if there is no link.
+         */
+        void setNextInWriteOrder(T next);
+    }
 }

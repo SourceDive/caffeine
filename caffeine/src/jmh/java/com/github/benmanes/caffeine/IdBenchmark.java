@@ -15,22 +15,22 @@
  */
 package com.github.benmanes.caffeine;
 
+import com.github.benmanes.caffeine.cache.tracing.TracerIdGenerator;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
-
-import com.github.benmanes.caffeine.cache.tracing.TracerIdGenerator;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Benchmark)
 public class IdBenchmark {
-  TracerIdGenerator generator = new TracerIdGenerator();
+    TracerIdGenerator generator = new TracerIdGenerator();
 
-  @Benchmark @Threads(4)
-  public void generate() {
-    generator.nextId();
-  }
+    @Benchmark
+    @Threads(4)
+    public void generate() {
+        generator.nextId();
+    }
 }

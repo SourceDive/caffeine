@@ -15,16 +15,9 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Group;
-import org.openjdk.jmh.annotations.GroupThreads;
-import org.openjdk.jmh.annotations.Param;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.State;
-
 import com.github.benmanes.caffeine.cache.buffer.Buffer;
 import com.github.benmanes.caffeine.cache.buffer.BufferType;
+import org.openjdk.jmh.annotations.*;
 
 /**
  * A concurrent benchmark for read buffer implementation options. A read buffer may be a lossy,
@@ -45,21 +38,26 @@ import com.github.benmanes.caffeine.cache.buffer.BufferType;
 @State(Scope.Benchmark)
 public class ReadBufferBenchmark {
 
-  @Param BufferType bufferType;
-  Buffer buffer;
+    @Param
+    BufferType bufferType;
+    Buffer buffer;
 
-  @Setup
-  public void setup() {
-    buffer = bufferType.create();
-  }
+    @Setup
+    public void setup() {
+        buffer = bufferType.create();
+    }
 
-  @Benchmark @Group @GroupThreads(8)
-  public void record() {
-    buffer.record();
-  }
+    @Benchmark
+    @Group
+    @GroupThreads(8)
+    public void record() {
+        buffer.record();
+    }
 
-  @Benchmark @Group @GroupThreads(1)
-  public void drain() {
-    buffer.drain();
-  }
+    @Benchmark
+    @Group
+    @GroupThreads(1)
+    public void drain() {
+        buffer.drain();
+    }
 }

@@ -15,89 +15,92 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Deque;
+import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
 
 import javax.annotation.concurrent.NotThreadSafe;
-
-import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
+import java.util.Deque;
 
 /**
  * A linked deque implementation used to represent an access-order queue.
  *
- * @author ben.manes@gmail.com (Ben Manes)
  * @param <E> the type of elements held in this collection
+ * @author ben.manes@gmail.com (Ben Manes)
  */
 @NotThreadSafe
 final class AccessOrderDeque<E extends AccessOrder<E>> extends AbstractLinkedDeque<E> {
 
-  @Override
-  public boolean contains(Object o) {
-    return (o instanceof AccessOrder<?>) && contains((AccessOrder<?>) o);
-  }
-
-  // A fast-path containment check
-  boolean contains(AccessOrder<?> e) {
-    return (e.getPreviousInAccessOrder() != null)
-        || (e.getNextInAccessOrder() != null)
-        || (e == first);
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public boolean remove(Object o) {
-    return (o instanceof AccessOrder<?>) && remove((E) o);
-  }
-
-  // A fast-path removal
-  boolean remove(E e) {
-    if (contains(e)) {
-      unlink(e);
-      return true;
+    @Override
+    public boolean contains(Object o) {
+        return (o instanceof AccessOrder<?>) && contains((AccessOrder<?>) o);
     }
-    return false;
-  }
 
-  @Override
-  public E getPrevious(E e) {
-    return e.getPreviousInAccessOrder();
-  }
+    // A fast-path containment check
+    boolean contains(AccessOrder<?> e) {
+        return (e.getPreviousInAccessOrder() != null)
+                || (e.getNextInAccessOrder() != null)
+                || (e == first);
+    }
 
-  @Override
-  public void setPrevious(E e, E prev) {
-    e.setPreviousInAccessOrder(prev);
-  }
+    @Override
+    @SuppressWarnings("unchecked")
+    public boolean remove(Object o) {
+        return (o instanceof AccessOrder<?>) && remove((E) o);
+    }
 
-  @Override
-  public E getNext(E e) {
-    return e.getNextInAccessOrder();
-  }
+    // A fast-path removal
+    boolean remove(E e) {
+        if (contains(e)) {
+            unlink(e);
+            return true;
+        }
+        return false;
+    }
 
-  @Override
-  public void setNext(E e, E next) {
-    e.setNextInAccessOrder(next);
-  }
+    @Override
+    public E getPrevious(E e) {
+        return e.getPreviousInAccessOrder();
+    }
 
-  /**
-   * An element that is linked on the {@link Deque}.
-   */
-  interface AccessOrder<T extends AccessOrder<T>> {
+    @Override
+    public void setPrevious(E e, E prev) {
+        e.setPreviousInAccessOrder(prev);
+    }
+
+    @Override
+    public E getNext(E e) {
+        return e.getNextInAccessOrder();
+    }
+
+    @Override
+    public void setNext(E e, E next) {
+        e.setNextInAccessOrder(next);
+    }
 
     /**
-     * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
-     * element on the deque.
+     * An element that is linked on the {@link Deque}.
      */
-    T getPreviousInAccessOrder();
+    interface AccessOrder<T extends AccessOrder<T>> {
 
-    /** Sets the previous element or <tt>null</tt> if there is no link. */
-    void setPreviousInAccessOrder(T prev);
+        /**
+         * Retrieves the previous element or <tt>null</tt> if either the element is unlinked or the first
+         * element on the deque.
+         */
+        T getPreviousInAccessOrder();
 
-    /**
-     * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
-     * element on the deque.
-     */
-    T getNextInAccessOrder();
+        /**
+         * Sets the previous element or <tt>null</tt> if there is no link.
+         */
+        void setPreviousInAccessOrder(T prev);
 
-    /** Sets the next element or <tt>null</tt> if there is no link. */
-    void setNextInAccessOrder(T next);
-  }
+        /**
+         * Retrieves the next element or <tt>null</tt> if either the element is unlinked or the last
+         * element on the deque.
+         */
+        T getNextInAccessOrder();
+
+        /**
+         * Sets the next element or <tt>null</tt> if there is no link.
+         */
+        void setNextInAccessOrder(T next);
+    }
 }

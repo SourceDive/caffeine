@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
+import com.google.common.base.CaseFormat;
+
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-
-import com.google.common.base.CaseFormat;
 
 /**
  * The features that may be code generated.
@@ -27,77 +27,77 @@ import com.google.common.base.CaseFormat;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 enum Feature {
-  STRONG_KEYS,
-  WEAK_KEYS,
+    STRONG_KEYS,
+    WEAK_KEYS,
 
-  STRONG_VALUES,
-  INFIRM_VALUES,
-  WEAK_VALUES,
-  SOFT_VALUES,
+    STRONG_VALUES,
+    INFIRM_VALUES,
+    WEAK_VALUES,
+    SOFT_VALUES,
 
-  EXPIRE_ACCESS,
-  EXPIRE_WRITE,
-  REFRESH_WRITE,
+    EXPIRE_ACCESS,
+    EXPIRE_WRITE,
+    REFRESH_WRITE,
 
-  MAXIMUM_SIZE,
-  MAXIMUM_WEIGHT,
+    MAXIMUM_SIZE,
+    MAXIMUM_WEIGHT,
 
-  LOADING,
-  LISTENING,
-  EXECUTOR,
-  STATS;
+    LOADING,
+    LISTENING,
+    EXECUTOR,
+    STATS;
 
-  public static String makeEnumName(Iterable<Feature> features) {
-    return StreamSupport.stream(features.spliterator(), false)
-        .map(feature -> feature.name())
-        .collect(Collectors.joining("_"));
-  }
+    public static String makeEnumName(Iterable<Feature> features) {
+        return StreamSupport.stream(features.spliterator(), false)
+                .map(feature -> feature.name())
+                .collect(Collectors.joining("_"));
+    }
 
-  public static String makeEnumName(String enumName) {
-    return CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, enumName);
-  }
+    public static String makeEnumName(String enumName) {
+        return CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, enumName);
+    }
 
-  public static String makeClassName(Iterable<Feature> features) {
-    String enumName = makeEnumName(features);
-    return makeClassName(enumName);
-  }
+    public static String makeClassName(Iterable<Feature> features) {
+        String enumName = makeEnumName(features);
+        return makeClassName(enumName);
+    }
 
-  public static String makeClassName(String enumName) {
-    return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
-  }
+    public static String makeClassName(String enumName) {
+        return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, enumName);
+    }
 
-  public static boolean usesWriteOrderDeque(Set<Feature> features) {
-    return features.contains(Feature.EXPIRE_WRITE);
-  }
+    public static boolean usesWriteOrderDeque(Set<Feature> features) {
+        return features.contains(Feature.EXPIRE_WRITE);
+    }
 
-  public static boolean usesAccessOrderDeque(Set<Feature> features) {
-    return features.contains(Feature.MAXIMUM_SIZE)
-        || features.contains(Feature.MAXIMUM_WEIGHT)
-        || features.contains(Feature.EXPIRE_ACCESS);
-  }
+    public static boolean usesAccessOrderDeque(Set<Feature> features) {
+        return features.contains(Feature.MAXIMUM_SIZE)
+                || features.contains(Feature.MAXIMUM_WEIGHT)
+                || features.contains(Feature.EXPIRE_ACCESS);
+    }
 
-  public static boolean usesWriteQueue(Set<Feature> features) {
-    return features.contains(Feature.MAXIMUM_SIZE)
-        || features.contains(Feature.MAXIMUM_WEIGHT)
-        || features.contains(Feature.EXPIRE_ACCESS)
-        || features.contains(Feature.EXPIRE_WRITE)
-        || features.contains(Feature.REFRESH_WRITE);
-  }
+    public static boolean usesWriteQueue(Set<Feature> features) {
+        return features.contains(Feature.MAXIMUM_SIZE)
+                || features.contains(Feature.MAXIMUM_WEIGHT)
+                || features.contains(Feature.EXPIRE_ACCESS)
+                || features.contains(Feature.EXPIRE_WRITE)
+                || features.contains(Feature.REFRESH_WRITE);
+    }
 
-  public static boolean useWriteTime(Set<Feature> features) {
-    return features.contains(Feature.EXPIRE_WRITE)
-        || features.contains(Feature.REFRESH_WRITE);
-  }
+    public static boolean useWriteTime(Set<Feature> features) {
+        return features.contains(Feature.EXPIRE_WRITE)
+                || features.contains(Feature.REFRESH_WRITE);
+    }
 
-  public static boolean usesTicker(Set<Feature> features) {
-    return features.contains(Feature.STATS)
-        || features.contains(Feature.EXPIRE_ACCESS)
-        || features.contains(Feature.EXPIRE_WRITE)
-        || features.contains(Feature.REFRESH_WRITE);
-  }
+    public static boolean usesTicker(Set<Feature> features) {
+        return features.contains(Feature.STATS)
+                || features.contains(Feature.EXPIRE_ACCESS)
+                || features.contains(Feature.EXPIRE_WRITE)
+                || features.contains(Feature.REFRESH_WRITE);
+    }
 
-  public static boolean usesMaximum(Set<Feature> features) {
-    return features.contains(Feature.MAXIMUM_SIZE)
-        || features.contains(Feature.MAXIMUM_WEIGHT);
-  }
+    public static boolean usesMaximum(Set<Feature> features) {
+        return features.contains(Feature.MAXIMUM_SIZE)
+                || features.contains(Feature.MAXIMUM_WEIGHT);
+    }
 }

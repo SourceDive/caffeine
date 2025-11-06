@@ -15,10 +15,10 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.AbstractMap.SimpleEntry;
 import java.util.concurrent.ConcurrentMap;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * An entry that allows updates to write through to the backing map.
@@ -26,28 +26,28 @@ import java.util.concurrent.ConcurrentMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class WriteThroughEntry<K, V> extends SimpleEntry<K, V> {
-  static final long serialVersionUID = 1;
+    static final long serialVersionUID = 1;
 
-  private final ConcurrentMap<K, V> map;
+    private final ConcurrentMap<K, V> map;
 
-  WriteThroughEntry(ConcurrentMap<K, V> map, K key, V value) {
-    super(key, value);
-    this.map = requireNonNull(map);
-  }
+    WriteThroughEntry(ConcurrentMap<K, V> map, K key, V value) {
+        super(key, value);
+        this.map = requireNonNull(map);
+    }
 
-  @Override
-  public V setValue(V value) {
-    map.put(getKey(), value);
-    return super.setValue(value);
-  }
+    @Override
+    public V setValue(V value) {
+        map.put(getKey(), value);
+        return super.setValue(value);
+    }
 
-  @Override
-  public boolean equals(Object o) {
-    // suppress Findbugs warning
-    return super.equals(o);
-  }
+    @Override
+    public boolean equals(Object o) {
+        // suppress Findbugs warning
+        return super.equals(o);
+    }
 
-  Object writeReplace() {
-    return new SimpleEntry<K, V>(this);
-  }
+    Object writeReplace() {
+        return new SimpleEntry<K, V>(this);
+    }
 }

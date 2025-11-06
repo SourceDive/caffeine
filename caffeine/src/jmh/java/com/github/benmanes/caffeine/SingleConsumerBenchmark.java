@@ -15,15 +15,9 @@
  */
 package com.github.benmanes.caffeine;
 
-import java.util.Queue;
+import org.openjdk.jmh.annotations.*;
 
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Group;
-import org.openjdk.jmh.annotations.GroupThreads;
-import org.openjdk.jmh.annotations.Param;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.State;
+import java.util.Queue;
 
 /**
  * A concurrent benchmark where multiple threads produce into, and a single thread consumes from,
@@ -33,43 +27,55 @@ import org.openjdk.jmh.annotations.State;
  */
 @State(Scope.Group)
 public class SingleConsumerBenchmark {
-  @Param({"SingleConsumerQueue", "ConcurrentLinkedQueue"})
-  QueueType queueType;
+    @Param({"SingleConsumerQueue", "ConcurrentLinkedQueue"})
+    QueueType queueType;
 
-  Queue<Boolean> queue;
+    Queue<Boolean> queue;
 
-  @Setup
-  public void setup() {
-    queue = queueType.create();
-  }
+    @Setup
+    public void setup() {
+        queue = queueType.create();
+    }
 
-  @Benchmark  @Group("no_contention") @GroupThreads(1)
-  public void no_contention_offer() {
-    queue.offer(Boolean.TRUE);
-  }
+    @Benchmark
+    @Group("no_contention")
+    @GroupThreads(1)
+    public void no_contention_offer() {
+        queue.offer(Boolean.TRUE);
+    }
 
-  @Benchmark @Group("no_contention") @GroupThreads(1)
-  public void no_contention_poll() {
-    queue.poll();
-  }
+    @Benchmark
+    @Group("no_contention")
+    @GroupThreads(1)
+    public void no_contention_poll() {
+        queue.poll();
+    }
 
-  @Benchmark @Group("mild_contention") @GroupThreads(4)
-  public void mild_contention_offer() {
-    queue.offer(Boolean.TRUE);
-  }
+    @Benchmark
+    @Group("mild_contention")
+    @GroupThreads(4)
+    public void mild_contention_offer() {
+        queue.offer(Boolean.TRUE);
+    }
 
-  @Benchmark @Group("mild_contention") @GroupThreads(1)
-  public void mild_contention_poll() {
-    queue.poll();
-  }
+    @Benchmark
+    @Group("mild_contention")
+    @GroupThreads(1)
+    public void mild_contention_poll() {
+        queue.poll();
+    }
 
-  @Benchmark @Group("high_contention") @GroupThreads(8)
-  public void high_contention_offer() {
-    queue.offer(Boolean.TRUE);
-  }
+    @Benchmark
+    @Group("high_contention")
+    @GroupThreads(8)
+    public void high_contention_offer() {
+        queue.offer(Boolean.TRUE);
+    }
 
-  @Benchmark @Group("high_contention") @GroupThreads(1)
-  public void high_contention_poll() {
-    queue.poll();
-  }
+    @Benchmark
+    @Group("high_contention")
+    @GroupThreads(1)
+    public void high_contention_poll() {
+        queue.poll();
+    }
 }

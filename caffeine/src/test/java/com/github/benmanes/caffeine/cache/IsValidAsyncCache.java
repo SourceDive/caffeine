@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A matcher that evaluates a {@link AsyncLoadingCache} to determine if it is in a valid state.
@@ -27,40 +27,40 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IsValidAsyncCache<K, V>
-    extends TypeSafeDiagnosingMatcher<AsyncLoadingCache<K, V>> {
-  Description description;
+        extends TypeSafeDiagnosingMatcher<AsyncLoadingCache<K, V>> {
+    Description description;
 
-  @Override
-  public void describeTo(Description description) {
-    description.appendText("async cache");
-    if (this.description != description) {
-      description.appendText(this.description.toString());
-    }
-  }
-
-  @Override
-  protected boolean matchesSafely(AsyncLoadingCache<K, V> cache, Description description) {
-    this.description = description;
-
-    if (cache instanceof BoundedLocalCache.BoundedLocalAsyncLoadingCache<?, ?>) {
-      BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V> local =
-          (BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V>) cache;
-      return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid()
-          .matchesSafely(local.cache, description);
+    @Override
+    public void describeTo(Description description) {
+        description.appendText("async cache");
+        if (this.description != description) {
+            description.appendText(this.description.toString());
+        }
     }
 
-    if (cache instanceof UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<?, ?>) {
-      UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V> local =
-          (UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>) cache;
-      return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid()
-          .matchesSafely(local.cache, description);
+    @Override
+    protected boolean matchesSafely(AsyncLoadingCache<K, V> cache, Description description) {
+        this.description = description;
+
+        if (cache instanceof BoundedLocalCache.BoundedLocalAsyncLoadingCache<?, ?>) {
+            BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V> local =
+                    (BoundedLocalCache.BoundedLocalAsyncLoadingCache<K, V>) cache;
+            return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid()
+                    .matchesSafely(local.cache, description);
+        }
+
+        if (cache instanceof UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<?, ?>) {
+            UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V> local =
+                    (UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>) cache;
+            return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid()
+                    .matchesSafely(local.cache, description);
+        }
+
+        return true;
     }
 
-    return true;
-  }
-
-  @Factory
-  public static <K, V> IsValidAsyncCache<K, V> validAsyncCache() {
-    return new IsValidAsyncCache<K, V>();
-  }
+    @Factory
+    public static <K, V> IsValidAsyncCache<K, V> validAsyncCache() {
+        return new IsValidAsyncCache<K, V>();
+    }
 }

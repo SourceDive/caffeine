@@ -15,12 +15,12 @@
  */
 package com.github.benmanes.caffeine.profiler;
 
+import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import com.google.common.base.Stopwatch;
+
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
-
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
-import com.google.common.base.Stopwatch;
 
 /**
  * A skeletal hook for inspecting with an attached profiler.
@@ -29,28 +29,28 @@ import com.google.common.base.Stopwatch;
  */
 
 public abstract class ProfilerHook {
-  protected static int NUM_THREADS = 25;
-  protected static int DISPLAY_DELAY_SEC = 5;
+    protected static int NUM_THREADS = 25;
+    protected static int DISPLAY_DELAY_SEC = 5;
 
-  protected final LongAdder calls;
+    protected final LongAdder calls;
 
-  ProfilerHook() {
-    calls = new LongAdder();
-  }
+    ProfilerHook() {
+        calls = new LongAdder();
+    }
 
-  public final void run() {
-    scheduleStatusTask();
-    ConcurrentTestHarness.timeTasks(NUM_THREADS, this::profile);
-  }
+    public final void run() {
+        scheduleStatusTask();
+        ConcurrentTestHarness.timeTasks(NUM_THREADS, this::profile);
+    }
 
-  protected abstract void profile();
+    protected abstract void profile();
 
-  private void scheduleStatusTask() {
-    Stopwatch stopwatch = Stopwatch.createStarted();
-    Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
-      long count = calls.longValue();
-      long rate = count / stopwatch.elapsed(TimeUnit.SECONDS);
-      System.out.printf("%s - %,d [%,d / sec]%n", stopwatch, count, rate);
-    }, DISPLAY_DELAY_SEC, DISPLAY_DELAY_SEC, TimeUnit.SECONDS);
-  }
+    private void scheduleStatusTask() {
+        Stopwatch stopwatch = Stopwatch.createStarted();
+        Executors.newSingleThreadScheduledExecutor().scheduleWithFixedDelay(() -> {
+            long count = calls.longValue();
+            long rate = count / stopwatch.elapsed(TimeUnit.SECONDS);
+            System.out.printf("%s - %,d [%,d / sec]%n", stopwatch, count, rate);
+        }, DISPLAY_DELAY_SEC, DISPLAY_DELAY_SEC, TimeUnit.SECONDS);
+    }
 }

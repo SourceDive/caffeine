@@ -15,15 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.lang.ref.ReferenceQueue;
+import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
+import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
-
-import com.github.benmanes.caffeine.cache.AccessOrderDeque.AccessOrder;
-import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
+import java.lang.ref.ReferenceQueue;
 
 /**
  * An entry in the cache containing the key, value, weight, access, and write metadata. The key
@@ -33,148 +32,171 @@ import com.github.benmanes.caffeine.cache.WriteOrderDeque.WriteOrder;
  */
 interface Node<K, V> extends AccessOrder<Node<K, V>>, WriteOrder<Node<K, V>> {
 
-  /** Return the key or {@code null} if it has been reclaimed by the garbage collector. */
-  @Nullable
-  K getKey();
+    /**
+     * Return the key or {@code null} if it has been reclaimed by the garbage collector.
+     */
+    @Nullable
+    K getKey();
 
-  /**
-   * Returns the reference that the cache is holding the entry by. This is either the key if
-   * strongly held or a {@link java.lang.ref.WeakReference} to that key.
-   */
-  @Nonnull
-  Object getKeyReference();
+    /**
+     * Returns the reference that the cache is holding the entry by. This is either the key if
+     * strongly held or a {@link java.lang.ref.WeakReference} to that key.
+     */
+    @Nonnull
+    Object getKeyReference();
 
-  /** Return the value or {@code null} if it has been reclaimed by the garbage collector. */
-  @Nullable
-  V getValue();
+    /**
+     * Return the value or {@code null} if it has been reclaimed by the garbage collector.
+     */
+    @Nullable
+    V getValue();
 
-  /**
-   * Sets the value, which may be held strongly, weakly, or softly. This update may be set lazily
-   * and rely on the memory fence when the lock is released.
-   */
-  @GuardedBy("this")
-  void setValue(@Nonnull V value, @Nullable ReferenceQueue<V> referenceQueue);
+    /**
+     * Sets the value, which may be held strongly, weakly, or softly. This update may be set lazily
+     * and rely on the memory fence when the lock is released.
+     */
+    @GuardedBy("this")
+    void setValue(@Nonnull V value, @Nullable ReferenceQueue<V> referenceQueue);
 
-  /**
-   * Returns {@code true} if the given objects are considered equivalent. A strongly held value is
-   * compared by equality and a weakly or softly held value is compared by identity.
-   */
-  boolean containsValue(@Nonnull Object value);
+    /**
+     * Returns {@code true} if the given objects are considered equivalent. A strongly held value is
+     * compared by equality and a weakly or softly held value is compared by identity.
+     */
+    boolean containsValue(@Nonnull Object value);
 
-  /** If the entry is available in the hash-table and page replacement policy. */
-  boolean isAlive();
+    /**
+     * If the entry is available in the hash-table and page replacement policy.
+     */
+    boolean isAlive();
 
-  /**
-   * If the entry was removed from the hash-table and is awaiting removal from the page
-   * replacement policy.
-   */
-  boolean isRetired();
+    /**
+     * If the entry was removed from the hash-table and is awaiting removal from the page
+     * replacement policy.
+     */
+    boolean isRetired();
 
-  /** If the entry was removed from the hash-table and the page replacement policy. */
-  boolean isDead();
+    /**
+     * If the entry was removed from the hash-table and the page replacement policy.
+     */
+    boolean isDead();
 
-  /** Sets the node to the <tt>retired</tt> state. */
-  @GuardedBy("this")
-  void retire();
+    /**
+     * Sets the node to the <tt>retired</tt> state.
+     */
+    @GuardedBy("this")
+    void retire();
 
-  /** Sets the node to the <tt>dead</tt> state. */
-  @GuardedBy("this")
-  void die();
+    /**
+     * Sets the node to the <tt>dead</tt> state.
+     */
+    @GuardedBy("this")
+    void die();
 
-  /* ---------------- Access order -------------- */
+    /* ---------------- Access order -------------- */
 
-  /** Returns the weight of this entry. */
-  @Nonnegative
-  @GuardedBy("this")
-  default int getWeight() {
-    return 1;
-  }
+    /**
+     * Returns the weight of this entry.
+     */
+    @Nonnegative
+    @GuardedBy("this")
+    default int getWeight() {
+        return 1;
+    }
 
-  /** Sets the weight. */
-  @Nonnegative
-  @GuardedBy("this")
-  default void setWeight(int weight) {}
+    /**
+     * Sets the weight.
+     */
+    @Nonnegative
+    @GuardedBy("this")
+    default void setWeight(int weight) {
+    }
 
-  /* ---------------- Access order -------------- */
+    /* ---------------- Access order -------------- */
 
-  /** Returns the time that this entry was last accessed, in ns. */
-  default long getAccessTime() {
-    return 0L;
-  }
+    /**
+     * Returns the time that this entry was last accessed, in ns.
+     */
+    default long getAccessTime() {
+        return 0L;
+    }
 
-  /**
-   * Sets the access time in nanoseconds. This update may be set lazily and rely on the memory fence
-   * when the lock is released.
-   */
-  default void setAccessTime(@Nonnegative long time) {}
+    /**
+     * Sets the access time in nanoseconds. This update may be set lazily and rely on the memory fence
+     * when the lock is released.
+     */
+    default void setAccessTime(@Nonnegative long time) {
+    }
 
-  @Override
-  @GuardedBy("evictionLock")
-  default Node<K, V> getPreviousInAccessOrder() {
-    return null;
-  }
+    @Override
+    @GuardedBy("evictionLock")
+    default Node<K, V> getPreviousInAccessOrder() {
+        return null;
+    }
 
-  @Override
-  @GuardedBy("evictionLock")
-  default void setPreviousInAccessOrder(@Nullable Node<K, V> prev) {
-    throw new UnsupportedOperationException();
-  }
+    @Override
+    @GuardedBy("evictionLock")
+    default void setPreviousInAccessOrder(@Nullable Node<K, V> prev) {
+        throw new UnsupportedOperationException();
+    }
 
-  @Override
-  @GuardedBy("evictionLock")
-  default Node<K, V> getNextInAccessOrder() {
-    return null;
-  }
+    @Override
+    @GuardedBy("evictionLock")
+    default Node<K, V> getNextInAccessOrder() {
+        return null;
+    }
 
-  @Override
-  @GuardedBy("evictionLock")
-  default void setNextInAccessOrder(@Nullable Node<K, V> next) {
-    throw new UnsupportedOperationException();
-  }
+    @Override
+    @GuardedBy("evictionLock")
+    default void setNextInAccessOrder(@Nullable Node<K, V> next) {
+        throw new UnsupportedOperationException();
+    }
 
-  /* ---------------- Write order -------------- */
+    /* ---------------- Write order -------------- */
 
-  /** Returns the time that this entry was last written, in ns. */
-  @Nonnegative
-  default long getWriteTime() {
-    return 0L;
-  }
+    /**
+     * Returns the time that this entry was last written, in ns.
+     */
+    @Nonnegative
+    default long getWriteTime() {
+        return 0L;
+    }
 
-  /**
-   * Sets the write time in nanoseconds. This update may be set lazily and rely on the memory fence
-   * when the lock is released.
-   */
-  default void setWriteTime(@Nonnegative long time) {}
+    /**
+     * Sets the write time in nanoseconds. This update may be set lazily and rely on the memory fence
+     * when the lock is released.
+     */
+    default void setWriteTime(@Nonnegative long time) {
+    }
 
-  /**
-   * Atomically sets the write time to the given updated value if the current value equals the
-   * expected value and returns if the update was successful.
-   */
-  default boolean casWriteTime(@Nonnegative long expect, @Nonnegative long update) {
-    throw new UnsupportedOperationException();
-  }
+    /**
+     * Atomically sets the write time to the given updated value if the current value equals the
+     * expected value and returns if the update was successful.
+     */
+    default boolean casWriteTime(@Nonnegative long expect, @Nonnegative long update) {
+        throw new UnsupportedOperationException();
+    }
 
-  @Override
-  @GuardedBy("evictionLock")
-  default Node<K, V> getPreviousInWriteOrder() {
-    return null;
-  }
+    @Override
+    @GuardedBy("evictionLock")
+    default Node<K, V> getPreviousInWriteOrder() {
+        return null;
+    }
 
-  @Override
-  @GuardedBy("evictionLock")
-  default void setPreviousInWriteOrder(@Nullable Node<K, V> prev) {
-    throw new UnsupportedOperationException();
-  }
+    @Override
+    @GuardedBy("evictionLock")
+    default void setPreviousInWriteOrder(@Nullable Node<K, V> prev) {
+        throw new UnsupportedOperationException();
+    }
 
-  @Override
-  @GuardedBy("evictionLock")
-  default Node<K, V> getNextInWriteOrder() {
-    return null;
-  }
+    @Override
+    @GuardedBy("evictionLock")
+    default Node<K, V> getNextInWriteOrder() {
+        return null;
+    }
 
-  @Override
-  @GuardedBy("evictionLock")
-  default void setNextInWriteOrder(@Nullable Node<K, V> next) {
-    throw new UnsupportedOperationException();
-  }
+    @Override
+    @GuardedBy("evictionLock")
+    default void setNextInWriteOrder(@Nullable Node<K, V> next) {
+        throw new UnsupportedOperationException();
+    }
 }

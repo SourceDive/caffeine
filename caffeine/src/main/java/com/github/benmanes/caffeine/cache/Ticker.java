@@ -27,33 +27,41 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public interface Ticker {
 
-  /** @return the number of nanoseconds elapsed since this ticker's fixed point of reference */
-  @Nonnegative
-  long read();
+    /**
+     * @return the number of nanoseconds elapsed since this ticker's fixed point of reference
+     */
+    @Nonnegative
+    long read();
 
-  /** @return a ticker that reads the current time using {@link System#nanoTime} */
-  static Ticker systemTicker() {
-    return SystemTicker.INSTANCE;
-  }
+    /**
+     * @return a ticker that reads the current time using {@link System#nanoTime}
+     */
+    static Ticker systemTicker() {
+        return SystemTicker.INSTANCE;
+    }
 
-  /** @return a ticker that always returns {@code 0} */
-  static Ticker disabledTicker() {
-    return DisabledTicker.INSTANCE;
-  }
+    /**
+     * @return a ticker that always returns {@code 0}
+     */
+    static Ticker disabledTicker() {
+        return DisabledTicker.INSTANCE;
+    }
 }
 
 enum SystemTicker implements Ticker {
-  INSTANCE;
+    INSTANCE;
 
-  @Override public long read() {
-    return System.nanoTime();
-  }
+    @Override
+    public long read() {
+        return System.nanoTime();
+    }
 }
 
 enum DisabledTicker implements Ticker {
-  INSTANCE;
+    INSTANCE;
 
-  @Override public long read() {
-    return 0L;
-  }
+    @Override
+    public long read() {
+        return 0L;
+    }
 }

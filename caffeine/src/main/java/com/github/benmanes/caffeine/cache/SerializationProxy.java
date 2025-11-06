@@ -26,70 +26,70 @@ import java.util.concurrent.TimeUnit;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class SerializationProxy<K, V> implements Serializable {
-  private static final long serialVersionUID = 1;
+    private static final long serialVersionUID = 1;
 
-  Ticker ticker;
-  boolean async;
-  boolean weakKeys;
-  boolean weakValues;
-  boolean softValues;
-  Weigher<?, ?> weigher;
-  boolean isRecordingStats;
-  long expiresAfterWriteNanos;
-  long expiresAfterAccessNanos;
-  long refreshAfterWriteNanos;
-  CacheLoader<? super K, V> loader;
-  RemovalListener<?, ?> removalListener;
-  long maximumSize = Caffeine.UNSET_INT;
-  long maximumWeight = Caffeine.UNSET_INT;
+    Ticker ticker;
+    boolean async;
+    boolean weakKeys;
+    boolean weakValues;
+    boolean softValues;
+    Weigher<?, ?> weigher;
+    boolean isRecordingStats;
+    long expiresAfterWriteNanos;
+    long expiresAfterAccessNanos;
+    long refreshAfterWriteNanos;
+    CacheLoader<? super K, V> loader;
+    RemovalListener<?, ?> removalListener;
+    long maximumSize = Caffeine.UNSET_INT;
+    long maximumWeight = Caffeine.UNSET_INT;
 
-  @SuppressWarnings("unchecked")
-  Caffeine<Object, Object> recreateCaffeine() {
-    Caffeine<Object, Object> builder = Caffeine.newBuilder();
-    if (ticker != null) {
-      builder.ticker(ticker);
+    @SuppressWarnings("unchecked")
+    Caffeine<Object, Object> recreateCaffeine() {
+        Caffeine<Object, Object> builder = Caffeine.newBuilder();
+        if (ticker != null) {
+            builder.ticker(ticker);
+        }
+        if (isRecordingStats) {
+            builder.recordStats();
+        }
+        if (maximumSize != Caffeine.UNSET_INT) {
+            builder.maximumSize(maximumSize);
+        }
+        if (maximumWeight != Caffeine.UNSET_INT) {
+            builder.maximumWeight(maximumWeight);
+            builder.weigher((Weigher<Object, Object>) weigher);
+        }
+        if (expiresAfterWriteNanos > 0) {
+            builder.expireAfterWrite(expiresAfterWriteNanos, TimeUnit.NANOSECONDS);
+        }
+        if (expiresAfterAccessNanos > 0) {
+            builder.expireAfterAccess(expiresAfterAccessNanos, TimeUnit.NANOSECONDS);
+        }
+        if (refreshAfterWriteNanos > 0) {
+            builder.refreshAfterWrite(refreshAfterWriteNanos, TimeUnit.NANOSECONDS);
+        }
+        if (weakKeys) {
+            builder.weakKeys();
+        }
+        if (weakValues) {
+            builder.weakValues();
+        }
+        if (softValues) {
+            builder.softValues();
+        }
+        if (removalListener != null) {
+            builder.removalListener((RemovalListener<Object, Object>) removalListener);
+        }
+        return builder;
     }
-    if (isRecordingStats) {
-      builder.recordStats();
-    }
-    if (maximumSize != Caffeine.UNSET_INT) {
-      builder.maximumSize(maximumSize);
-    }
-    if (maximumWeight != Caffeine.UNSET_INT) {
-      builder.maximumWeight(maximumWeight);
-      builder.weigher((Weigher<Object, Object>) weigher);
-    }
-    if (expiresAfterWriteNanos > 0) {
-      builder.expireAfterWrite(expiresAfterWriteNanos, TimeUnit.NANOSECONDS);
-    }
-    if (expiresAfterAccessNanos > 0) {
-      builder.expireAfterAccess(expiresAfterAccessNanos, TimeUnit.NANOSECONDS);
-    }
-    if (refreshAfterWriteNanos > 0) {
-      builder.refreshAfterWrite(refreshAfterWriteNanos, TimeUnit.NANOSECONDS);
-    }
-    if (weakKeys) {
-      builder.weakKeys();
-    }
-    if (weakValues) {
-      builder.weakValues();
-    }
-    if (softValues) {
-      builder.softValues();
-    }
-    if (removalListener != null) {
-      builder.removalListener((RemovalListener<Object, Object>) removalListener);
-    }
-    return builder;
-  }
 
-  Object readResolve() {
-    Caffeine<Object, Object> builder = recreateCaffeine();
-    if (async) {
-      return builder.buildAsync(loader);
-    } else if (loader != null) {
-      return builder.build(loader);
+    Object readResolve() {
+        Caffeine<Object, Object> builder = recreateCaffeine();
+        if (async) {
+            return builder.buildAsync(loader);
+        } else if (loader != null) {
+            return builder.build(loader);
+        }
+        return builder.build();
     }
-    return builder.build();
-  }
 }

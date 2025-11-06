@@ -15,13 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.Objects.requireNonNull;
-
-import java.io.Serializable;
-
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
+import java.io.Serializable;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Calculates the weights of cache entries. The total weight threshold is used to determine when an
@@ -35,70 +34,71 @@ import javax.annotation.concurrent.ThreadSafe;
 @FunctionalInterface
 public interface Weigher<K, V> {
 
-  /**
-   * Returns the weight of a cache entry. There is no unit for entry weights; rather they are simply
-   * relative to each other.
-   *
-   * @param key the key to weigh
-   * @param value the value to weigh
-   * @return the weight of the entry; must be non-negative
-   */
-  @Nonnegative
-  int weigh(@Nonnull K key, @Nonnull V value);
+    /**
+     * Returns the weight of a cache entry. There is no unit for entry weights; rather they are simply
+     * relative to each other.
+     *
+     * @param key   the key to weigh
+     * @param value the value to weigh
+     * @return the weight of the entry; must be non-negative
+     */
+    @Nonnegative
+    int weigh(@Nonnull K key, @Nonnull V value);
 
-  /**
-   * Returns a weigher where an entry has a weight of {@code 1}.
-   *
-   * @param <K> the type of keys
-   * @param <V> the type of values
-   * @return a weigher where an entry has a weight of {@code 1}
-   */
-  @Nonnull
-  static <K, V> Weigher<K, V> singleton() {
-    @SuppressWarnings("unchecked")
-    Weigher<K, V> self = (Weigher<K, V>) SingletonWeigher.INSTANCE;
-    return self;
-  }
+    /**
+     * Returns a weigher where an entry has a weight of {@code 1}.
+     *
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a weigher where an entry has a weight of {@code 1}
+     */
+    @Nonnull
+    static <K, V> Weigher<K, V> singleton() {
+        @SuppressWarnings("unchecked")
+        Weigher<K, V> self = (Weigher<K, V>) SingletonWeigher.INSTANCE;
+        return self;
+    }
 
-  /**
-   * Returns a weigher that enforces that the weight is non-negative.
-   *
-   * @param delegate the weigher to that weighs the entry
-   * @param <K> the type of keys
-   * @param <V> the type of values
-   * @return a weigher that enforces that the weight is non-negative
-   */
-  @Nonnull
-  static <K, V> Weigher<K, V> bounded(@Nonnull Weigher<K, V> delegate) {
-    return new BoundedWeigher<>(delegate);
-  }
+    /**
+     * Returns a weigher that enforces that the weight is non-negative.
+     *
+     * @param delegate the weigher to that weighs the entry
+     * @param <K>      the type of keys
+     * @param <V>      the type of values
+     * @return a weigher that enforces that the weight is non-negative
+     */
+    @Nonnull
+    static <K, V> Weigher<K, V> bounded(@Nonnull Weigher<K, V> delegate) {
+        return new BoundedWeigher<>(delegate);
+    }
 }
 
 enum SingletonWeigher implements Weigher<Object, Object> {
-  INSTANCE;
+    INSTANCE;
 
-  @Override public int weigh(Object key, Object value) {
-    return 1;
-  }
+    @Override
+    public int weigh(Object key, Object value) {
+        return 1;
+    }
 }
 
 final class BoundedWeigher<K, V> implements Weigher<K, V>, Serializable {
-  static final long serialVersionUID = 1;
-  final Weigher<? super K, ? super V> delegate;
+    static final long serialVersionUID = 1;
+    final Weigher<? super K, ? super V> delegate;
 
-  BoundedWeigher(Weigher<? super K, ? super V> delegate) {
-    requireNonNull(delegate);
-    this.delegate = delegate;
-  }
+    BoundedWeigher(Weigher<? super K, ? super V> delegate) {
+        requireNonNull(delegate);
+        this.delegate = delegate;
+    }
 
-  @Override
-  public int weigh(K key, V value) {
-    int weight = delegate.weigh(key, value);
-    Caffeine.requireArgument(weight >= 0);
-    return weight;
-  }
+    @Override
+    public int weigh(K key, V value) {
+        int weight = delegate.weigh(key, value);
+        Caffeine.requireArgument(weight >= 0);
+        return weight;
+    }
 
-  Object writeReplace() {
-    return delegate;
-  }
+    Object writeReplace() {
+        return delegate;
+    }
 }

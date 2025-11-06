@@ -15,43 +15,24 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static java.util.Objects.requireNonNull;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
-
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadLocalRandom;
-
-import javax.annotation.Nullable;
-
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.RemovalNotification;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Advance;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheExecutor;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.CacheWeigher;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Compute;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Expire;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Implementation;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.InitialCapacity;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Listener;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Loader;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.MaximumSize;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Population;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.ReferenceType;
-import com.github.benmanes.caffeine.cache.testing.CacheSpec.Stats;
+import com.github.benmanes.caffeine.cache.testing.CacheSpec.*;
 import com.github.benmanes.caffeine.cache.testing.RemovalListeners.ConsumingRemovalListener;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
+
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadLocalRandom;
+
+import static java.util.Objects.requireNonNull;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 
 /**
  * The cache configuration context for a test case.
@@ -59,256 +40,261 @@ import com.google.common.collect.ImmutableSet;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class CacheContext {
-  final InitialCapacity initialCapacity;
-  final Implementation implementation;
-  final Listener removalListenerType;
-  final CacheExecutor cacheExecutor;
-  final ReferenceType valueStrength;
-  final ReferenceType keyStrength;
-  final MaximumSize maximumSize;
-  final Population population;
-  final CacheWeigher weigher;
-  final Expire afterAccess;
-  final Expire afterWrite;
-  final Executor executor;
-  final Advance advance;
-  final Expire refresh;
-  final Loader loader;
-  final Stats stats;
+    final InitialCapacity initialCapacity;
+    final Implementation implementation;
+    final Listener removalListenerType;
+    final CacheExecutor cacheExecutor;
+    final ReferenceType valueStrength;
+    final ReferenceType keyStrength;
+    final MaximumSize maximumSize;
+    final Population population;
+    final CacheWeigher weigher;
+    final Expire afterAccess;
+    final Expire afterWrite;
+    final Executor executor;
+    final Advance advance;
+    final Expire refresh;
+    final Loader loader;
+    final Stats stats;
 
-  final Compute compute;
-  final FakeTicker ticker;
-  final Map<Integer, Integer> original;
-  final RemovalListener<Integer, Integer> removalListener;
+    final Compute compute;
+    final FakeTicker ticker;
+    final Map<Integer, Integer> original;
+    final RemovalListener<Integer, Integer> removalListener;
 
-  Cache<?, ?> cache;
-  AsyncLoadingCache<?, ?> asyncCache;
+    Cache<?, ?> cache;
+    AsyncLoadingCache<?, ?> asyncCache;
 
-  @Nullable Integer firstKey;
-  @Nullable Integer middleKey;
-  @Nullable Integer lastKey;
-  long initialSize;
+    @Nullable
+    Integer firstKey;
+    @Nullable
+    Integer middleKey;
+    @Nullable
+    Integer lastKey;
+    long initialSize;
 
-  // Generated on-demand
-  Integer absentKey;
-  Integer absentValue;
+    // Generated on-demand
+    Integer absentKey;
+    Integer absentValue;
 
-  Map<Integer, Integer> absent;
+    Map<Integer, Integer> absent;
 
-  public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
-      MaximumSize maximumSize, Expire afterAccess, Expire afterWrite, Expire refresh,
-      Advance advance, ReferenceType keyStrength, ReferenceType valueStrength,
-      CacheExecutor cacheExecutor, Listener removalListenerType, Population population,
-      boolean isLoading, Compute compute, Loader loader, Implementation implementation) {
-    this.initialCapacity = requireNonNull(initialCapacity);
-    this.stats = requireNonNull(stats);
-    this.weigher = requireNonNull(weigher);
-    this.maximumSize = requireNonNull(maximumSize);
-    this.afterAccess = requireNonNull(afterAccess);
-    this.afterWrite = requireNonNull(afterWrite);
-    this.refresh = requireNonNull(refresh);
-    this.advance = requireNonNull(advance);
-    this.keyStrength = requireNonNull(keyStrength);
-    this.valueStrength = requireNonNull(valueStrength);
-    this.cacheExecutor = requireNonNull(cacheExecutor);
-    this.executor = cacheExecutor.get();
-    this.removalListenerType = removalListenerType;
-    this.removalListener = removalListenerType.create();
-    this.population = requireNonNull(population);
-    this.loader = isLoading ? requireNonNull(loader) : null;
-    this.ticker = new FakeTicker();
-    this.implementation = requireNonNull(implementation);
-    this.original = new LinkedHashMap<>();
-    this.initialSize = -1;
-    this.compute = compute;
-  }
-
-  public boolean isAsync() {
-    return (compute == Compute.ASYNC);
-  }
-
-  public Population population() {
-    return population;
-  }
-
-  public Integer firstKey() {
-    assertThat("Invalid usage of context", firstKey, is(not(nullValue())));
-    return firstKey;
-  }
-
-  public Integer middleKey() {
-    assertThat("Invalid usage of context", middleKey, is(not(nullValue())));
-    return middleKey;
-  }
-
-  public Integer lastKey() {
-    assertThat("Invalid usage of context", lastKey, is(not(nullValue())));
-    return lastKey;
-  }
-
-  public Set<Integer> firstMiddleLastKeys() {
-    return ImmutableSet.of(firstKey, middleKey, lastKey);
-  }
-
-  public void clear() {
-    original.clear();
-    absent = null;
-    absentKey = null;
-    firstKey = null;
-    middleKey = null;
-    lastKey = null;
-  }
-
-  public Integer absentKey() {
-    return (absentKey == null) ? (absentKey = nextAbsentKey()) : absentKey;
-  }
-
-  public Integer absentValue() {
-    return (absentValue == null) ? (absentValue = -absentKey()) : absentValue;
-  }
-
-  public Map<Integer, Integer> absent() {
-    if (absent != null) {
-      return absent;
+    public CacheContext(InitialCapacity initialCapacity, Stats stats, CacheWeigher weigher,
+                        MaximumSize maximumSize, Expire afterAccess, Expire afterWrite, Expire refresh,
+                        Advance advance, ReferenceType keyStrength, ReferenceType valueStrength,
+                        CacheExecutor cacheExecutor, Listener removalListenerType, Population population,
+                        boolean isLoading, Compute compute, Loader loader, Implementation implementation) {
+        this.initialCapacity = requireNonNull(initialCapacity);
+        this.stats = requireNonNull(stats);
+        this.weigher = requireNonNull(weigher);
+        this.maximumSize = requireNonNull(maximumSize);
+        this.afterAccess = requireNonNull(afterAccess);
+        this.afterWrite = requireNonNull(afterWrite);
+        this.refresh = requireNonNull(refresh);
+        this.advance = requireNonNull(advance);
+        this.keyStrength = requireNonNull(keyStrength);
+        this.valueStrength = requireNonNull(valueStrength);
+        this.cacheExecutor = requireNonNull(cacheExecutor);
+        this.executor = cacheExecutor.get();
+        this.removalListenerType = removalListenerType;
+        this.removalListener = removalListenerType.create();
+        this.population = requireNonNull(population);
+        this.loader = isLoading ? requireNonNull(loader) : null;
+        this.ticker = new FakeTicker();
+        this.implementation = requireNonNull(implementation);
+        this.original = new LinkedHashMap<>();
+        this.initialSize = -1;
+        this.compute = compute;
     }
-    absent = new LinkedHashMap<>();
-    do {
-      Integer key = nextAbsentKey();
-      absent.put(key, -key);
-    } while (absent.size() < 10);
-    return absent;
-  }
 
-  public Set<Integer> absentKeys() {
-    return absent().keySet();
-  }
+    public boolean isAsync() {
+        return (compute == Compute.ASYNC);
+    }
 
-  private Integer nextAbsentKey() {
-    int base = original.isEmpty() ? 0 : (lastKey + 1);
-    return ThreadLocalRandom.current().nextInt(base, Integer.MAX_VALUE);
-  }
+    public Population population() {
+        return population;
+    }
 
-  public long initialSize() {
-    return (initialSize < 0) ? (initialSize = original.size()) : initialSize;
-  }
+    public Integer firstKey() {
+        assertThat("Invalid usage of context", firstKey, is(not(nullValue())));
+        return firstKey;
+    }
 
-  public long maximumSize() {
-    assertThat("Invalid usage of context", maximumSize, is(not(nullValue())));
-    return maximumSize.max();
-  }
+    public Integer middleKey() {
+        assertThat("Invalid usage of context", middleKey, is(not(nullValue())));
+        return middleKey;
+    }
 
-  public long maximumWeight() {
-    assertThat("Invalid usage of context", isWeighted(), is(not(nullValue())));
-    long maximum = weigher.unitsPerEntry() * maximumSize.max();
-    return (maximum < 0) ? Long.MAX_VALUE : maximum;
-  }
+    public Integer lastKey() {
+        assertThat("Invalid usage of context", lastKey, is(not(nullValue())));
+        return lastKey;
+    }
 
-  public long maximumWeightOrSize() {
-    return isWeighted() ? maximumWeight() : maximumSize();
-  }
+    public Set<Integer> firstMiddleLastKeys() {
+        return ImmutableSet.of(firstKey, middleKey, lastKey);
+    }
 
-  public boolean isWeighted() {
-    return (weigher != CacheWeigher.DEFAULT);
-  }
+    public void clear() {
+        original.clear();
+        absent = null;
+        absentKey = null;
+        firstKey = null;
+        middleKey = null;
+        lastKey = null;
+    }
 
-  public boolean isUnbounded() {
-    return (maximumSize == MaximumSize.DISABLED) || (maximumSize == MaximumSize.UNREACHABLE);
-  }
+    public Integer absentKey() {
+        return (absentKey == null) ? (absentKey = nextAbsentKey()) : absentKey;
+    }
 
-  public boolean refreshes() {
-    return (refresh != Expire.DISABLED);
-  }
+    public Integer absentValue() {
+        return (absentValue == null) ? (absentValue = -absentKey()) : absentValue;
+    }
 
-  /** The initial entries in the cache, iterable in insertion order. */
-  public Map<Integer, Integer> original() {
-    initialSize(); // lazy initialize
-    return original;
-  }
+    public Map<Integer, Integer> absent() {
+        if (absent != null) {
+            return absent;
+        }
+        absent = new LinkedHashMap<>();
+        do {
+            Integer key = nextAbsentKey();
+            absent.put(key, -key);
+        } while (absent.size() < 10);
+        return absent;
+    }
 
-  public ReferenceType keyStrength() {
-    return keyStrength;
-  }
+    public Set<Integer> absentKeys() {
+        return absent().keySet();
+    }
 
-  public ReferenceType valueStrength() {
-    return valueStrength;
-  }
+    private Integer nextAbsentKey() {
+        int base = original.isEmpty() ? 0 : (lastKey + 1);
+        return ThreadLocalRandom.current().nextInt(base, Integer.MAX_VALUE);
+    }
 
-  public boolean isLoading() {
-    return (loader != null);
-  }
+    public long initialSize() {
+        return (initialSize < 0) ? (initialSize = original.size()) : initialSize;
+    }
 
-  public Loader loader() {
-    return loader;
-  }
+    public long maximumSize() {
+        assertThat("Invalid usage of context", maximumSize, is(not(nullValue())));
+        return maximumSize.max();
+    }
 
-  public Listener removalListenerType() {
-    return removalListenerType;
-  }
+    public long maximumWeight() {
+        assertThat("Invalid usage of context", isWeighted(), is(not(nullValue())));
+        long maximum = weigher.unitsPerEntry() * maximumSize.max();
+        return (maximum < 0) ? Long.MAX_VALUE : maximum;
+    }
 
-  public RemovalListener<Integer, Integer> removalListener() {
-    return requireNonNull(removalListener);
-  }
+    public long maximumWeightOrSize() {
+        return isWeighted() ? maximumWeight() : maximumSize();
+    }
 
-  public List<RemovalNotification<Integer, Integer>> consumedNotifications() {
-    return (removalListenerType() == Listener.CONSUMING)
-        ? ((ConsumingRemovalListener<Integer, Integer>) removalListener).evicted()
-        : Collections.emptyList();
-  }
+    public boolean isWeighted() {
+        return (weigher != CacheWeigher.DEFAULT);
+    }
 
-  public boolean isRecordingStats() {
-    return (stats == Stats.ENABLED);
-  }
+    public boolean isUnbounded() {
+        return (maximumSize == MaximumSize.DISABLED) || (maximumSize == MaximumSize.UNREACHABLE);
+    }
 
-  public CacheStats stats() {
-    return cache.stats();
-  }
+    public boolean refreshes() {
+        return (refresh != Expire.DISABLED);
+    }
 
-  public boolean expires() {
-    return (afterAccess != Expire.DISABLED) || (afterWrite != Expire.DISABLED);
-  }
+    /**
+     * The initial entries in the cache, iterable in insertion order.
+     */
+    public Map<Integer, Integer> original() {
+        initialSize(); // lazy initialize
+        return original;
+    }
 
-  public Expire expireAfterAccess() {
-    return afterAccess;
-  }
+    public ReferenceType keyStrength() {
+        return keyStrength;
+    }
 
-  public Expire expireAfterWrite() {
-    return afterWrite;
-  }
+    public ReferenceType valueStrength() {
+        return valueStrength;
+    }
 
-  public FakeTicker ticker() {
-    return ticker;
-  }
+    public boolean isLoading() {
+        return (loader != null);
+    }
 
-  public Implementation implementation() {
-    return implementation;
-  }
+    public Loader loader() {
+        return loader;
+    }
 
-  public CacheExecutor executorType() {
-    return cacheExecutor;
-  }
+    public Listener removalListenerType() {
+        return removalListenerType;
+    }
 
-  public Executor executor() {
-    return executor;
-  }
+    public RemovalListener<Integer, Integer> removalListener() {
+        return requireNonNull(removalListener);
+    }
 
-  @Override
-  public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("population", population)
-        .add("maximumSize", maximumSize)
-        .add("weigher", weigher)
-        .add("afterAccess", afterAccess)
-        .add("afterWrite", afterWrite)
-        .add("refreshAfterWrite", refresh)
-        .add("keyStrength", keyStrength)
-        .add("valueStrength", valueStrength)
-        .add("compute", compute)
-        .add("loader", loader)
-        .add("cacheExecutor", cacheExecutor)
-        .add("removalListener", removalListenerType)
-        .add("initialCapacity", initialCapacity)
-        .add("stats", stats)
-        .add("implementation", implementation)
-        .toString();
-  }
+    public List<RemovalNotification<Integer, Integer>> consumedNotifications() {
+        return (removalListenerType() == Listener.CONSUMING)
+                ? ((ConsumingRemovalListener<Integer, Integer>) removalListener).evicted()
+                : Collections.emptyList();
+    }
+
+    public boolean isRecordingStats() {
+        return (stats == Stats.ENABLED);
+    }
+
+    public CacheStats stats() {
+        return cache.stats();
+    }
+
+    public boolean expires() {
+        return (afterAccess != Expire.DISABLED) || (afterWrite != Expire.DISABLED);
+    }
+
+    public Expire expireAfterAccess() {
+        return afterAccess;
+    }
+
+    public Expire expireAfterWrite() {
+        return afterWrite;
+    }
+
+    public FakeTicker ticker() {
+        return ticker;
+    }
+
+    public Implementation implementation() {
+        return implementation;
+    }
+
+    public CacheExecutor executorType() {
+        return cacheExecutor;
+    }
+
+    public Executor executor() {
+        return executor;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("population", population)
+                .add("maximumSize", maximumSize)
+                .add("weigher", weigher)
+                .add("afterAccess", afterAccess)
+                .add("afterWrite", afterWrite)
+                .add("refreshAfterWrite", refresh)
+                .add("keyStrength", keyStrength)
+                .add("valueStrength", valueStrength)
+                .add("compute", compute)
+                .add("loader", loader)
+                .add("cacheExecutor", cacheExecutor)
+                .add("removalListener", removalListenerType)
+                .add("initialCapacity", initialCapacity)
+                .add("stats", stats)
+                .add("implementation", implementation)
+                .toString();
+    }
 }

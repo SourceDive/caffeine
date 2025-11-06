@@ -15,33 +15,33 @@
  */
 package com.github.benmanes.caffeine.profiler;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import com.github.benmanes.caffeine.EliminationStack;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @author Ben Manes (ben.manes@gmail.com)
  */
 public final class EliminationProfiler extends ProfilerHook {
-  static final Integer ELEMENT = 1;
+    static final Integer ELEMENT = 1;
 
-  final EliminationStack<Integer> stack = new EliminationStack<>();
+    final EliminationStack<Integer> stack = new EliminationStack<>();
 
-  @Override
-  protected void profile() {
-    ThreadLocalRandom random = ThreadLocalRandom.current();
-    for (;;) {
-      if (random.nextBoolean()) {
-        stack.push(ELEMENT);
-      } else {
-        stack.pop();
-      }
-      calls.increment();
+    @Override
+    protected void profile() {
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        for (; ; ) {
+            if (random.nextBoolean()) {
+                stack.push(ELEMENT);
+            } else {
+                stack.pop();
+            }
+            calls.increment();
+        }
     }
-  }
 
-  public static void main(String[] args) {
-    EliminationProfiler profile = new EliminationProfiler();
-    profile.run();
-  }
+    public static void main(String[] args) {
+        EliminationProfiler profile = new EliminationProfiler();
+        profile.run();
+    }
 }

@@ -21,22 +21,28 @@ package com.github.benmanes.caffeine.cache.buffer;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public interface Buffer {
-  static final int MAX_SIZE = 32; // power of 2
-  static final int MAX_SIZE_MASK = MAX_SIZE - 1;
+    static final int MAX_SIZE = 32; // power of 2
+    static final int MAX_SIZE_MASK = MAX_SIZE - 1;
 
-  /**
-   * Attempts to record an event.
-   *
-   * @return if a drain is needed
-   */
-  boolean record();
+    /**
+     * Attempts to record an event.
+     *
+     * @return if a drain is needed
+     */
+    boolean record();
 
-  /** Attempts to drain the events. */
-  void drain();
+    /**
+     * Attempts to drain the events.
+     */
+    void drain();
 
-  /** Returns the total number of events recorded. */
-  long recorded();
+    /**
+     * Returns the total number of events recorded.
+     */
+    long recorded();
 
-  /** Returns the total number of events consumed. */
-  long drained();
+    /**
+     * Returns the total number of events consumed.
+     */
+    long drained();
 }

@@ -15,9 +15,9 @@
  */
 package com.github.benmanes.caffeine.profiler;
 
-import java.util.Map;
-
 import com.github.benmanes.caffeine.cache.CacheType;
+
+import java.util.Map;
 
 /**
  * A hook for profiling caches.
@@ -25,28 +25,28 @@ import com.github.benmanes.caffeine.cache.CacheType;
  * @author Ben Manes (ben.manes@gmail.com)
  */
 public final class CacheProfiler extends ProfilerHook {
-  static final int NUM_THREADS = 25;
-  static final int MAX_SIZE = 2 * NUM_THREADS;
-  static final CacheType type = CacheType.Caffeine;
+    static final int NUM_THREADS = 25;
+    static final int MAX_SIZE = 2 * NUM_THREADS;
+    static final CacheType type = CacheType.Caffeine;
 
-  final Map<Long, Long> map;
+    final Map<Long, Long> map;
 
-  CacheProfiler() {
-    map = type.create(MAX_SIZE, NUM_THREADS);
-  }
-
-  @Override
-  protected void profile() {
-    Long id = Thread.currentThread().getId();
-    map.put(id, id);
-    for (;;) {
-      map.get(id);
-      calls.increment();
+    CacheProfiler() {
+        map = type.create(MAX_SIZE, NUM_THREADS);
     }
-  }
 
-  public static void main(String[] args) {
-    CacheProfiler profile = new CacheProfiler();
-    profile.run();
-  }
+    @Override
+    protected void profile() {
+        Long id = Thread.currentThread().getId();
+        map.put(id, id);
+        for (; ; ) {
+            map.get(id);
+            calls.increment();
+        }
+    }
+
+    public static void main(String[] args) {
+        CacheProfiler profile = new CacheProfiler();
+        profile.run();
+    }
 }

@@ -15,60 +15,64 @@
  */
 package com.github.benmanes.caffeine;
 
+import com.google.common.collect.Queues;
+
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.LinkedTransferQueue;
-import java.util.concurrent.SynchronousQueue;
-
-import com.google.common.collect.Queues;
+import java.util.concurrent.*;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum QueueType {
-  SingleConsumerQueue() {
-    @Override public <E> Queue<E> create() {
-      return new SingleConsumerQueue<E>();
-    }
-  },
-  EliminationStack() {
-    @Override public <E> Queue<E> create() {
-      return new EliminationStack<E>().asLifoQueue();
-    }
-  },
-  ConcurrentLinkedQueue() {
-    @Override public <E> Queue<E> create() {
-      return new ConcurrentLinkedQueue<E>();
-    }
-  },
-  ArrayBlockingQueue() {
-    @Override public <E> Queue<E> create() {
-      return new ArrayBlockingQueue<E>(10000);
-    }
-  },
-  LinkedBlockingQueueBenchmark() {
-    @Override public <E> Queue<E> create() {
-      return new LinkedBlockingQueue<E>();
-    }
-  },
-  LinkedTransferQueue() {
-    @Override public <E> Queue<E> create() {
-      return new LinkedTransferQueue<E>();
-    }
-  },
-  SynchronousQueue() {
-    @Override public <E> Queue<E> create() {
-      return new SynchronousQueue<E>();
-    }
-  },
-  SynchronizedArrayDeque() {
-    @Override public <E> Queue<E> create() {
-      return Queues.synchronizedDeque(new ArrayDeque<E>(10000));
-    }
-  };
+    SingleConsumerQueue() {
+        @Override
+        public <E> Queue<E> create() {
+            return new SingleConsumerQueue<E>();
+        }
+    },
+    EliminationStack() {
+        @Override
+        public <E> Queue<E> create() {
+            return new EliminationStack<E>().asLifoQueue();
+        }
+    },
+    ConcurrentLinkedQueue() {
+        @Override
+        public <E> Queue<E> create() {
+            return new ConcurrentLinkedQueue<E>();
+        }
+    },
+    ArrayBlockingQueue() {
+        @Override
+        public <E> Queue<E> create() {
+            return new ArrayBlockingQueue<E>(10000);
+        }
+    },
+    LinkedBlockingQueueBenchmark() {
+        @Override
+        public <E> Queue<E> create() {
+            return new LinkedBlockingQueue<E>();
+        }
+    },
+    LinkedTransferQueue() {
+        @Override
+        public <E> Queue<E> create() {
+            return new LinkedTransferQueue<E>();
+        }
+    },
+    SynchronousQueue() {
+        @Override
+        public <E> Queue<E> create() {
+            return new SynchronousQueue<E>();
+        }
+    },
+    SynchronizedArrayDeque() {
+        @Override
+        public <E> Queue<E> create() {
+            return Queues.synchronizedDeque(new ArrayDeque<E>(10000));
+        }
+    };
 
-  public abstract <E> Queue<E> create();
+    public abstract <E> Queue<E> create();
 }

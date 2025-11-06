@@ -15,7 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
+import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.text.NumberFormat;
 import java.time.LocalTime;
@@ -25,11 +29,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.LongAdder;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
-import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
-import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * A stress test to observe if the cache has a memory leak by not being able to drain the buffers
@@ -38,74 +38,74 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Stresser {
-  private static final long STATUS_INTERVAL = 5;
-  private static final int SIZE = (2 << 14);
-  private static final int MASK = SIZE - 1;
-  private static final int THREADS = 8;
+    private static final long STATUS_INTERVAL = 5;
+    private static final int SIZE = (2 << 14);
+    private static final int MASK = SIZE - 1;
+    private static final int THREADS = 8;
 
-  private Integer[] ints;
-  private Cache<Integer, Boolean> cache;
-  private BoundedLocalCache<Integer, Boolean> local;
-  private ScheduledExecutorService statusExecutor;
-  private LongAdder evictions;
+    private Integer[] ints;
+    private Cache<Integer, Boolean> cache;
+    private BoundedLocalCache<Integer, Boolean> local;
+    private ScheduledExecutorService statusExecutor;
+    private LongAdder evictions;
 
-  public Stresser() {
-    ThreadFactory threadFactory = new ThreadFactoryBuilder()
-        .setPriority(Thread.MAX_PRIORITY)
-        .setDaemon(true)
-        .build();
-    statusExecutor = Executors.newSingleThreadScheduledExecutor(threadFactory);
-    statusExecutor.scheduleAtFixedRate(newStatusTask(), THREADS, STATUS_INTERVAL, SECONDS);
-    cache = Caffeine.newBuilder()
-        .removalListener(notif -> evictions.increment())
-        .executor(MoreExecutors.directExecutor())
-        .maximumSize(SIZE)
-        .build();
-    evictions = new LongAdder();
-    local = (BoundedLocalCache<Integer, Boolean>) cache.asMap();
-  }
-
-  public void run() throws InterruptedException {
-    for (int i = 0; i < SIZE; i++) {
-      cache.put(i, Boolean.TRUE);
-    }
-    ints = new Integer[SIZE];
-    IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
-    for (int i = 0; i < SIZE; i++) {
-      ints[i] = generator.nextInt();
+    public Stresser() {
+        ThreadFactory threadFactory = new ThreadFactoryBuilder()
+                .setPriority(Thread.MAX_PRIORITY)
+                .setDaemon(true)
+                .build();
+        statusExecutor = Executors.newSingleThreadScheduledExecutor(threadFactory);
+        statusExecutor.scheduleAtFixedRate(newStatusTask(), THREADS, STATUS_INTERVAL, SECONDS);
+        cache = Caffeine.newBuilder()
+                .removalListener(notif -> evictions.increment())
+                .executor(MoreExecutors.directExecutor())
+                .maximumSize(SIZE)
+                .build();
+        evictions = new LongAdder();
+        local = (BoundedLocalCache<Integer, Boolean>) cache.asMap();
     }
 
-    ConcurrentTestHarness.timeTasks(THREADS, () -> {
-      int index = ThreadLocalRandom.current().nextInt();
-      for (;;) {
-        cache.put(ints[index++ & MASK], Boolean.FALSE);
-        cache.getIfPresent(ints[index++ & MASK]);
-        Thread.yield();
-      }
-    });
-  }
+    public void run() throws InterruptedException {
+        for (int i = 0; i < SIZE; i++) {
+            cache.put(i, Boolean.TRUE);
+        }
+        ints = new Integer[SIZE];
+        IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
+        for (int i = 0; i < SIZE; i++) {
+            ints[i] = generator.nextInt();
+        }
 
-  private Runnable newStatusTask() {
-    return new Runnable() {
-      long runningTime;
+        ConcurrentTestHarness.timeTasks(THREADS, () -> {
+            int index = ThreadLocalRandom.current().nextInt();
+            for (; ; ) {
+                cache.put(ints[index++ & MASK], Boolean.FALSE);
+                cache.getIfPresent(ints[index++ & MASK]);
+                Thread.yield();
+            }
+        });
+    }
 
-      @Override
-      public void run() {
-        runningTime += STATUS_INTERVAL;
-        String elapsedTime = LocalTime.ofSecondOfDay(runningTime).toString();
-        String pendingReads = NumberFormat.getInstance().format(local.readBuffer.size());
-        String pendingWrites = NumberFormat.getInstance().format(local.writeQueue().size());
-        System.out.printf("---------- %s ----------%n", elapsedTime);
-        System.out.printf("Pending reads = %s%n", pendingReads);
-        System.out.printf("Pending write = %s%n", pendingWrites);
-        System.out.printf("Drain status = %s%n", local.drainStatus.get());
-        System.out.printf("Lock status = %s%n", local.evictionLock.isLocked());
-        System.out.printf("Evictions = %,d%n", evictions.intValue());
-      }
-    };
-  }
+    private Runnable newStatusTask() {
+        return new Runnable() {
+            long runningTime;
 
-  public static void main(String[] args) throws Exception {
-    new Stresser().run();
-  }
+            @Override
+            public void run() {
+                runningTime += STATUS_INTERVAL;
+                String elapsedTime = LocalTime.ofSecondOfDay(runningTime).toString();
+                String pendingReads = NumberFormat.getInstance().format(local.readBuffer.size());
+                String pendingWrites = NumberFormat.getInstance().format(local.writeQueue().size());
+                System.out.printf("---------- %s ----------%n", elapsedTime);
+                System.out.printf("Pending reads = %s%n", pendingReads);
+                System.out.printf("Pending write = %s%n", pendingWrites);
+                System.out.printf("Drain status = %s%n", local.drainStatus.get());
+                System.out.printf("Lock status = %s%n", local.evictionLock.isLocked());
+                System.out.printf("Evictions = %,d%n", evictions.intValue());
+            }
+        };
+    }
+
+    public static void main(String[] args) throws Exception {
+        new Stresser().run();
+    }
 }

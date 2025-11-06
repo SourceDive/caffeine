@@ -15,16 +15,15 @@
  */
 package com.github.benmanes.caffeine;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
-
+import com.google.common.collect.ForwardingMap;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import com.google.common.collect.ForwardingMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Demonstrates that inheritance is ~8% faster than delegation.
@@ -33,57 +32,57 @@ import com.google.common.collect.ForwardingMap;
  */
 @State(Scope.Benchmark)
 public class DelegationBenchmark {
-  private static final int SIZE = (2 << 14);
-  private static final int MASK = SIZE - 1;
+    private static final int SIZE = (2 << 14);
+    private static final int MASK = SIZE - 1;
 
-  final Map<Integer, Integer> inherit = new InheritMap();
-  final Map<Integer, Integer> delegate = new DelgateMap();
+    final Map<Integer, Integer> inherit = new InheritMap();
+    final Map<Integer, Integer> delegate = new DelgateMap();
 
-  @Setup
-  public void setup() {
-    for (int i = 0; i < SIZE; i++) {
-      inherit.put(i, i);
-      delegate.put(i, i);
-    }
-  }
-
-  @State(Scope.Thread)
-  public static class ThreadState {
-    int index = ThreadLocalRandom.current().nextInt();
-  }
-
-  @Benchmark
-  public void inherit_get(ThreadState threadState) {
-    inherit.get(threadState.index++ & MASK);
-  }
-
-  @Benchmark
-  public void delegate_get(ThreadState threadState) {
-    delegate.get(threadState.index++ & MASK);
-  }
-
-  static final class InheritMap extends ConcurrentHashMap<Integer, Integer> {
-    private static final long serialVersionUID = 1L;
-
-    @Override
-    public Integer get(Object key) {
-      Integer value = super.get(key);
-      return (value == null) ? null : (value - 1);
-    }
-  }
-
-  static final class DelgateMap extends ForwardingMap<Integer, Integer> {
-    final Map<Integer, Integer> delegate = new ConcurrentHashMap<>();
-
-    @Override
-    public Integer get(Object key) {
-      Integer value = delegate.get(key);
-      return (value == null) ? null : (value - 1);
+    @Setup
+    public void setup() {
+        for (int i = 0; i < SIZE; i++) {
+            inherit.put(i, i);
+            delegate.put(i, i);
+        }
     }
 
-    @Override
-    protected Map<Integer, Integer> delegate() {
-      return delegate;
+    @State(Scope.Thread)
+    public static class ThreadState {
+        int index = ThreadLocalRandom.current().nextInt();
     }
-  }
+
+    @Benchmark
+    public void inherit_get(ThreadState threadState) {
+        inherit.get(threadState.index++ & MASK);
+    }
+
+    @Benchmark
+    public void delegate_get(ThreadState threadState) {
+        delegate.get(threadState.index++ & MASK);
+    }
+
+    static final class InheritMap extends ConcurrentHashMap<Integer, Integer> {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Integer get(Object key) {
+            Integer value = super.get(key);
+            return (value == null) ? null : (value - 1);
+        }
+    }
+
+    static final class DelgateMap extends ForwardingMap<Integer, Integer> {
+        final Map<Integer, Integer> delegate = new ConcurrentHashMap<>();
+
+        @Override
+        public Integer get(Object key) {
+            Integer value = delegate.get(key);
+            return (value == null) ? null : (value - 1);
+        }
+
+        @Override
+        protected Map<Integer, Integer> delegate() {
+            return delegate;
+        }
+    }
 }

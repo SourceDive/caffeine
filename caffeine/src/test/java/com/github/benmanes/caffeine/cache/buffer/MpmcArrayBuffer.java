@@ -15,52 +15,51 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
-import java.util.concurrent.locks.Lock;
-
+import com.github.benmanes.caffeine.locks.NonReentrantLock;
 import org.jctools.queues.MpmcArrayQueue;
 
-import com.github.benmanes.caffeine.locks.NonReentrantLock;
+import java.util.concurrent.locks.Lock;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class MpmcArrayBuffer implements Buffer {
-  private final MpmcArrayQueue<Boolean> queue;
-  private final Lock evictionLock;
-  private long drained;
+    private final MpmcArrayQueue<Boolean> queue;
+    private final Lock evictionLock;
+    private long drained;
 
-  public MpmcArrayBuffer() {
-    evictionLock = new NonReentrantLock();
-    queue = new MpmcArrayQueue<>(MAX_SIZE);
-  }
-
-  @Override
-  public boolean record() {
-    return queue.offer(Boolean.TRUE);
-  }
-
-  @Override
-  public void drain() {
-    if (evictionLock.tryLock()) {
-      while (queue.poll() != null) {
-        drained++;
-      }
-      evictionLock.unlock();
+    public MpmcArrayBuffer() {
+        evictionLock = new NonReentrantLock();
+        queue = new MpmcArrayQueue<>(MAX_SIZE);
     }
-  }
 
-  @Override
-  public long recorded() {
-    return drained() + queue.size();
-  }
-
-  @Override
-  public long drained() {
-    evictionLock.lock();
-    try {
-      return drained;
-    } finally {
-      evictionLock.unlock();
+    @Override
+    public boolean record() {
+        return queue.offer(Boolean.TRUE);
     }
-  }
+
+    @Override
+    public void drain() {
+        if (evictionLock.tryLock()) {
+            while (queue.poll() != null) {
+                drained++;
+            }
+            evictionLock.unlock();
+        }
+    }
+
+    @Override
+    public long recorded() {
+        return drained() + queue.size();
+    }
+
+    @Override
+    public long drained() {
+        evictionLock.lock();
+        try {
+            return drained;
+        } finally {
+            evictionLock.unlock();
+        }
+    }
 }

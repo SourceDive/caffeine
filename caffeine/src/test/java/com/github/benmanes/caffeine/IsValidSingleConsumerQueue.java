@@ -15,20 +15,16 @@
  */
 package com.github.benmanes.caffeine;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
-
-import java.util.Set;
-
+import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
+import com.google.common.collect.Sets;
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
-import com.google.common.collect.Sets;
+import java.util.Set;
+
+import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
+import static org.hamcrest.Matchers.*;
 
 /**
  * A matcher that evaluates a {@link SingleConsumerQueue} to determine if it is in a valid state.
@@ -36,44 +32,44 @@ import com.google.common.collect.Sets;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IsValidSingleConsumerQueue<E>
-    extends TypeSafeDiagnosingMatcher<SingleConsumerQueue<? extends E>> {
+        extends TypeSafeDiagnosingMatcher<SingleConsumerQueue<? extends E>> {
 
-  @Override
-  public void describeTo(Description description) {
-    description.appendText("singleConsumerQueue");
-  }
-
-  @Override
-  protected boolean matchesSafely(SingleConsumerQueue<? extends E> queue, Description description) {
-    DescriptionBuilder builder = new DescriptionBuilder(description);
-
-    if (queue.isEmpty()) {
-      builder.expectThat("empty queue", queue, is(deeplyEmpty()));
-      builder.expectThat("empty queue", queue.tail, is(queue.head));
-      builder.expectThat("empty queue", queue.tail.next, is(nullValue()));
+    @Override
+    public void describeTo(Description description) {
+        description.appendText("singleConsumerQueue");
     }
-    builder.expectThat("corrupted queue node", queue.head.next, is(nullValue()));
-    checkForLoop(queue, builder);
 
-    return builder.matches();
-  }
+    @Override
+    protected boolean matchesSafely(SingleConsumerQueue<? extends E> queue, Description description) {
+        DescriptionBuilder builder = new DescriptionBuilder(description);
 
-  void checkForLoop(SingleConsumerQueue<? extends E> queue, DescriptionBuilder builder) {
-    Set<SingleConsumerQueue.Node<? extends E>> seen = Sets.newIdentityHashSet();
-    SingleConsumerQueue.Node<? extends E> node = queue.tail;
-    while (node.next != null) {
-      String errorMsg = String.format("Loop detected: %s in %s", node, seen);
-      builder.expectThat(errorMsg, seen.add(node), is(true));
-      if (node != queue.tail) {
-        builder.expectThat("not null value", node.value, is(not(nullValue())));
-      }
-      node = node.next;
+        if (queue.isEmpty()) {
+            builder.expectThat("empty queue", queue, is(deeplyEmpty()));
+            builder.expectThat("empty queue", queue.tail, is(queue.head));
+            builder.expectThat("empty queue", queue.tail.next, is(nullValue()));
+        }
+        builder.expectThat("corrupted queue node", queue.head.next, is(nullValue()));
+        checkForLoop(queue, builder);
+
+        return builder.matches();
     }
-    builder.expectThat("queue size", queue, hasSize(seen.size()));
-  }
 
-  @Factory
-  public static <E> IsValidSingleConsumerQueue<E> validate() {
-    return new IsValidSingleConsumerQueue<E>();
-  }
+    void checkForLoop(SingleConsumerQueue<? extends E> queue, DescriptionBuilder builder) {
+        Set<SingleConsumerQueue.Node<? extends E>> seen = Sets.newIdentityHashSet();
+        SingleConsumerQueue.Node<? extends E> node = queue.tail;
+        while (node.next != null) {
+            String errorMsg = String.format("Loop detected: %s in %s", node, seen);
+            builder.expectThat(errorMsg, seen.add(node), is(true));
+            if (node != queue.tail) {
+                builder.expectThat("not null value", node.value, is(not(nullValue())));
+            }
+            node = node.next;
+        }
+        builder.expectThat("queue size", queue, hasSize(seen.size()));
+    }
+
+    @Factory
+    public static <E> IsValidSingleConsumerQueue<E> validate() {
+        return new IsValidSingleConsumerQueue<E>();
+    }
 }

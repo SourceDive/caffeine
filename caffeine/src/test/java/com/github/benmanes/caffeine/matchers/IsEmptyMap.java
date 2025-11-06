@@ -15,18 +15,17 @@
  */
 package com.github.benmanes.caffeine.matchers;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
-import static org.hamcrest.Matchers.hasToString;
-import static org.hamcrest.Matchers.is;
-
-import java.util.Collections;
-import java.util.Map;
-
+import com.google.common.collect.ImmutableMap;
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.google.common.collect.ImmutableMap;
+import java.util.Collections;
+import java.util.Map;
+
+import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
+import static org.hamcrest.Matchers.hasToString;
+import static org.hamcrest.Matchers.is;
 
 /**
  * A matcher that performs an exhaustive empty check throughout the {@link Map} contract.
@@ -34,30 +33,30 @@ import com.google.common.collect.ImmutableMap;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IsEmptyMap<K, V>
-    extends TypeSafeDiagnosingMatcher<Map<? extends K, ? extends V>> {
+        extends TypeSafeDiagnosingMatcher<Map<? extends K, ? extends V>> {
 
-  @Override
-  public void describeTo(Description description) {
-    description.appendText("emptyMap");
-  }
+    @Override
+    public void describeTo(Description description) {
+        description.appendText("emptyMap");
+    }
 
-  @Override
-  protected boolean matchesSafely(Map<? extends K, ? extends V> map, Description description) {
-    DescriptionBuilder desc = new DescriptionBuilder(description);
+    @Override
+    protected boolean matchesSafely(Map<? extends K, ? extends V> map, Description description) {
+        DescriptionBuilder desc = new DescriptionBuilder(description);
 
-    desc.expectThat("empty keyset", map.keySet(), is(deeplyEmpty()));
-    desc.expectThat("empty values", map.values(), is(deeplyEmpty()));
-    desc.expectThat("empty entrySet", map.entrySet(), is(deeplyEmpty()));
-    desc.expectThat("empty map", map, is(Collections.EMPTY_MAP));
-    desc.expectThat("Size != 0", map.size(), is(0));
-    desc.expectThat("Not empty", map.isEmpty(), is(true));
-    desc.expectThat("hashcode", map.hashCode(), is(ImmutableMap.of().hashCode()));
-    desc.expectThat("toString", map, hasToString(ImmutableMap.of().toString()));
-    return desc.matches();
-  }
+        desc.expectThat("empty keyset", map.keySet(), is(deeplyEmpty()));
+        desc.expectThat("empty values", map.values(), is(deeplyEmpty()));
+        desc.expectThat("empty entrySet", map.entrySet(), is(deeplyEmpty()));
+        desc.expectThat("empty map", map, is(Collections.EMPTY_MAP));
+        desc.expectThat("Size != 0", map.size(), is(0));
+        desc.expectThat("Not empty", map.isEmpty(), is(true));
+        desc.expectThat("hashcode", map.hashCode(), is(ImmutableMap.of().hashCode()));
+        desc.expectThat("toString", map, hasToString(ImmutableMap.of().toString()));
+        return desc.matches();
+    }
 
-  @Factory
-  public static <K, V> IsEmptyMap<K, V> emptyMap() {
-    return new IsEmptyMap<K, V>();
-  }
+    @Factory
+    public static <K, V> IsEmptyMap<K, V> emptyMap() {
+        return new IsEmptyMap<K, V>();
+    }
 }

@@ -15,22 +15,18 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
+import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
+import com.google.common.collect.Sets;
+import org.hamcrest.Description;
+import org.hamcrest.Factory;
+import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import org.hamcrest.Description;
-import org.hamcrest.Factory;
-import org.hamcrest.TypeSafeDiagnosingMatcher;
-
-import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
-import com.google.common.collect.Sets;
+import static com.github.benmanes.caffeine.matchers.IsEmptyIterable.deeplyEmpty;
+import static org.hamcrest.Matchers.*;
 
 /**
  * A matcher that evaluates a {@link LinkedDeque} to determine if it is in a valid state.
@@ -39,59 +35,59 @@ import com.google.common.collect.Sets;
  */
 public final class IsValidLinkedDeque<E> extends TypeSafeDiagnosingMatcher<LinkedDeque<E>> {
 
-  @Override
-  public void describeTo(Description description) {
-    description.appendText("valid");
-  }
-
-  @Override
-  protected boolean matchesSafely(LinkedDeque<E> deque, Description description) {
-    DescriptionBuilder desc = new DescriptionBuilder(description);
-
-    if (deque.isEmpty()) {
-      checkEmpty(deque, desc);
+    @Override
+    public void describeTo(Description description) {
+        description.appendText("valid");
     }
-    checkIterator(deque, deque.iterator(), desc);
-    checkIterator(deque, deque.descendingIterator(), desc);
 
-    return desc.matches();
-  }
+    @Override
+    protected boolean matchesSafely(LinkedDeque<E> deque, Description description) {
+        DescriptionBuilder desc = new DescriptionBuilder(description);
 
-  void checkEmpty(LinkedDeque<? extends E> deque, DescriptionBuilder desc) {
-    desc.expectThat("empty deque", deque, deeplyEmpty());
-    desc.expectThat("empty deque", deque.pollFirst(), is(nullValue()));
-    desc.expectThat("empty deque", deque.pollLast(), is(nullValue()));
-    desc.expectThat("empty deque", deque.poll(), is(nullValue()));
-  }
+        if (deque.isEmpty()) {
+            checkEmpty(deque, desc);
+        }
+        checkIterator(deque, deque.iterator(), desc);
+        checkIterator(deque, deque.descendingIterator(), desc);
 
-  void checkIterator(LinkedDeque<E> deque, Iterator<E> iterator, DescriptionBuilder desc) {
-    Set<E> seen = Sets.newIdentityHashSet();
-    while (iterator.hasNext()) {
-      E element = iterator.next();
-      checkElement(deque, element, desc);
-      Supplier<String> errorMsg = () -> String.format("Loop detected: %s in %s", element, seen);
-      desc.expectThat(errorMsg, seen.add(element), is(true));
+        return desc.matches();
     }
-    desc.expectThat("deque size", deque, hasSize(seen.size()));
-  }
 
-  void checkElement(LinkedDeque<E> deque, E element, DescriptionBuilder desc) {
-    E first = deque.peekFirst();
-    E last = deque.peekLast();
-    if (element == first) {
-      desc.expectThat("not null prev", deque.getPrevious(element), is(nullValue()));
+    void checkEmpty(LinkedDeque<? extends E> deque, DescriptionBuilder desc) {
+        desc.expectThat("empty deque", deque, deeplyEmpty());
+        desc.expectThat("empty deque", deque.pollFirst(), is(nullValue()));
+        desc.expectThat("empty deque", deque.pollLast(), is(nullValue()));
+        desc.expectThat("empty deque", deque.poll(), is(nullValue()));
     }
-    if (element == last) {
-      desc.expectThat("not null next", deque.getNext(element), is(nullValue()));
-    }
-    if ((element != first) && (element != last)) {
-      desc.expectThat("empty deque", deque.getPrevious(element), is(not(nullValue())));
-      desc.expectThat("empty deque", deque.getNext(element), is(not(nullValue())));
-    }
-  }
 
-  @Factory
-  public static <E> IsValidLinkedDeque<E> validLinkedDeque() {
-    return new IsValidLinkedDeque<E>();
-  }
+    void checkIterator(LinkedDeque<E> deque, Iterator<E> iterator, DescriptionBuilder desc) {
+        Set<E> seen = Sets.newIdentityHashSet();
+        while (iterator.hasNext()) {
+            E element = iterator.next();
+            checkElement(deque, element, desc);
+            Supplier<String> errorMsg = () -> String.format("Loop detected: %s in %s", element, seen);
+            desc.expectThat(errorMsg, seen.add(element), is(true));
+        }
+        desc.expectThat("deque size", deque, hasSize(seen.size()));
+    }
+
+    void checkElement(LinkedDeque<E> deque, E element, DescriptionBuilder desc) {
+        E first = deque.peekFirst();
+        E last = deque.peekLast();
+        if (element == first) {
+            desc.expectThat("not null prev", deque.getPrevious(element), is(nullValue()));
+        }
+        if (element == last) {
+            desc.expectThat("not null next", deque.getNext(element), is(nullValue()));
+        }
+        if ((element != first) && (element != last)) {
+            desc.expectThat("empty deque", deque.getPrevious(element), is(not(nullValue())));
+            desc.expectThat("empty deque", deque.getNext(element), is(not(nullValue())));
+        }
+    }
+
+    @Factory
+    public static <E> IsValidLinkedDeque<E> validLinkedDeque() {
+        return new IsValidLinkedDeque<E>();
+    }
 }

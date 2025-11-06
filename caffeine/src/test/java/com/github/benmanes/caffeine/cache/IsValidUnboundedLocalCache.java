@@ -15,19 +15,16 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
-
-import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
-
+import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
+import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
+
+import static com.github.benmanes.caffeine.matchers.IsEmptyMap.emptyMap;
+import static org.hamcrest.Matchers.*;
 
 /**
  * A matcher that evaluates a {@link UnboundedLocalCache} to determine if it is in a valid state.
@@ -35,44 +32,44 @@ import com.github.benmanes.caffeine.matchers.DescriptionBuilder;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IsValidUnboundedLocalCache<K, V>
-    extends TypeSafeDiagnosingMatcher<UnboundedLocalCache<K, V>> {
-  DescriptionBuilder desc;
+        extends TypeSafeDiagnosingMatcher<UnboundedLocalCache<K, V>> {
+    DescriptionBuilder desc;
 
-  @Override
-  public void describeTo(Description description) {
-    description.appendText("valid unbounded cache");
-    if (desc.getDescription() != description) {
-      description.appendText(desc.getDescription().toString());
-    }
-  }
-
-  @Override
-  protected boolean matchesSafely(UnboundedLocalCache<K, V> map, Description description) {
-    desc = new DescriptionBuilder(description);
-    checkMap(map, desc);
-    return desc.matches();
-  }
-
-  private void checkMap(UnboundedLocalCache<K, V> map, DescriptionBuilder desc) {
-    if (map.isEmpty()) {
-      desc.expectThat("empty map", map, emptyMap());
+    @Override
+    public void describeTo(Description description) {
+        description.appendText("valid unbounded cache");
+        if (desc.getDescription() != description) {
+            description.appendText(desc.getDescription().toString());
+        }
     }
 
-    for (Entry<K, V> entry : map.data.entrySet()) {
-      desc.expectThat("non null key", entry.getKey(), is(not(nullValue())));
-      desc.expectThat("non null value", entry.getValue(), is(not(nullValue())));
-
-      if (entry.getValue() instanceof CompletableFuture<?>) {
-        CompletableFuture<?> future = (CompletableFuture<?>) entry.getValue();
-        boolean success = future.isDone() && !future.isCompletedExceptionally();
-        desc.expectThat("future is done", success, is(true));
-        desc.expectThat("not null value", future.getNow(null), is(not(nullValue())));
-      }
+    @Override
+    protected boolean matchesSafely(UnboundedLocalCache<K, V> map, Description description) {
+        desc = new DescriptionBuilder(description);
+        checkMap(map, desc);
+        return desc.matches();
     }
-  }
 
-  @Factory
-  public static <K, V> IsValidUnboundedLocalCache<K, V> valid() {
-    return new IsValidUnboundedLocalCache<K, V>();
-  }
+    private void checkMap(UnboundedLocalCache<K, V> map, DescriptionBuilder desc) {
+        if (map.isEmpty()) {
+            desc.expectThat("empty map", map, emptyMap());
+        }
+
+        for (Entry<K, V> entry : map.data.entrySet()) {
+            desc.expectThat("non null key", entry.getKey(), is(not(nullValue())));
+            desc.expectThat("non null value", entry.getValue(), is(not(nullValue())));
+
+            if (entry.getValue() instanceof CompletableFuture<?>) {
+                CompletableFuture<?> future = (CompletableFuture<?>) entry.getValue();
+                boolean success = future.isDone() && !future.isCompletedExceptionally();
+                desc.expectThat("future is done", success, is(true));
+                desc.expectThat("not null value", future.getNow(null), is(not(nullValue())));
+            }
+        }
+    }
+
+    @Factory
+    public static <K, V> IsValidUnboundedLocalCache<K, V> valid() {
+        return new IsValidUnboundedLocalCache<K, V>();
+    }
 }

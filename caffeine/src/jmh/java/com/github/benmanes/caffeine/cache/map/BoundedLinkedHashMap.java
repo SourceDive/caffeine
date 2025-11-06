@@ -15,25 +15,25 @@
  */
 package com.github.benmanes.caffeine.cache.map;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @NotThreadSafe
 public class BoundedLinkedHashMap<K, V> extends LinkedHashMap<K, V> {
-  private static final long serialVersionUID = 1L;
-  private final int maximumSize;
+    private static final long serialVersionUID = 1L;
+    private final int maximumSize;
 
-  public BoundedLinkedHashMap(boolean accessOrder, int maximumSize) {
-    super(maximumSize, 0.75f, accessOrder);
-    this.maximumSize = maximumSize;
-  }
+    public BoundedLinkedHashMap(boolean accessOrder, int maximumSize) {
+        super(maximumSize, 0.75f, accessOrder);
+        this.maximumSize = maximumSize;
+    }
 
-  @Override protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-    return size() > maximumSize;
-  }
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+        return size() > maximumSize;
+    }
 }

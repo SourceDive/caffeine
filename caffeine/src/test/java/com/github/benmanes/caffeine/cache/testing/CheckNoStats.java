@@ -15,11 +15,11 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
-
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * A test method with this annotation has indicated that no statistics should have been recorded
@@ -27,5 +27,7 @@ import java.lang.annotation.Target;
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Target(METHOD) @Retention(RUNTIME)
-public @interface CheckNoStats {}
+@Target(METHOD)
+@Retention(RUNTIME)
+public @interface CheckNoStats {
+}

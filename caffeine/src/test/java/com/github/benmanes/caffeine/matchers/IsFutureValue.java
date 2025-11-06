@@ -15,15 +15,14 @@
  */
 package com.github.benmanes.caffeine.matchers;
 
-import java.util.concurrent.Future;
-
+import com.google.common.util.concurrent.Futures;
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.hamcrest.core.Is;
 
-import com.google.common.util.concurrent.Futures;
+import java.util.concurrent.Future;
 
 /**
  * A matcher that unwraps a future and forwards evaluation to another matcher.
@@ -31,29 +30,29 @@ import com.google.common.util.concurrent.Futures;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IsFutureValue<V> extends TypeSafeDiagnosingMatcher<Future<V>> {
-  final Matcher<V> matcher;
+    final Matcher<V> matcher;
 
-  IsFutureValue(Matcher<V> matcher) {
-    this.matcher = matcher;
-  }
+    IsFutureValue(Matcher<V> matcher) {
+        this.matcher = matcher;
+    }
 
-  @Override
-  public void describeTo(Description description) {
-    matcher.describeTo(description);
-  }
+    @Override
+    public void describeTo(Description description) {
+        matcher.describeTo(description);
+    }
 
-  @Override
-  protected boolean matchesSafely(Future<V> future, Description description) {
-    return matcher.matches(Futures.getUnchecked(future));
-  }
+    @Override
+    protected boolean matchesSafely(Future<V> future, Description description) {
+        return matcher.matches(Futures.getUnchecked(future));
+    }
 
-  @Factory
-  public static <V> IsFutureValue<V> future(Matcher<V> matcher) {
-    return new IsFutureValue<V>(matcher);
-  }
+    @Factory
+    public static <V> IsFutureValue<V> future(Matcher<V> matcher) {
+        return new IsFutureValue<V>(matcher);
+    }
 
-  @Factory
-  public static <V> IsFutureValue<V> futureOf(V value) {
-    return new IsFutureValue<V>(Is.is(value));
-  }
+    @Factory
+    public static <V> IsFutureValue<V> futureOf(V value) {
+        return new IsFutureValue<V>(Is.is(value));
+    }
 }

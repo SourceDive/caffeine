@@ -15,18 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * This class provides a skeletal implementation of the {@link LoadingCache} interface to minimize
@@ -35,123 +29,133 @@ import java.util.logging.Logger;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 interface LocalLoadingCache<C extends LocalCache<K, V>, K, V>
-    extends LocalManualCache<C, K, V>, LoadingCache<K, V> {
-  static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
+        extends LocalManualCache<C, K, V>, LoadingCache<K, V> {
+    static final Logger logger = Logger.getLogger(LocalLoadingCache.class.getName());
 
-  /** Returns the {@link CacheLoader} used by this cache. */
-  CacheLoader<? super K, V> cacheLoader();
+    /**
+     * Returns the {@link CacheLoader} used by this cache.
+     */
+    CacheLoader<? super K, V> cacheLoader();
 
-  /** Returns whether the cache loader supports bulk loading. */
-  boolean hasBulkLoader();
+    /**
+     * Returns whether the cache loader supports bulk loading.
+     */
+    boolean hasBulkLoader();
 
-  /** Returns whether the supplied cache loader has bulk load functionality. */
-  default boolean hasLoadAll(CacheLoader<? super K, V> loader) {
-    try {
-      return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
-    } catch (NoSuchMethodException | SecurityException e) {
-      logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
-      return false;
-    }
-  }
-
-  @Override
-  default V get(K key) {
-    return cache().computeIfAbsent(key, cacheLoader()::load);
-  }
-
-  @Override
-  default Map<K, V> getAll(Iterable<? extends K> keys) {
-    return hasBulkLoader() ? loadInBulk(keys) : loadSequentially(keys);
-  }
-
-  /** Sequentially loads each missing entry. */
-  default Map<K, V> loadSequentially(Iterable<? extends K> keys) {
-    int count = 0;
-    Map<K, V> result = new HashMap<>();
-    Iterator<? extends K> iter = keys.iterator();
-    while (iter.hasNext()) {
-      K key = iter.next();
-      count++;
-      try {
-        V value = get(key);
-        if (value != null) {
-          result.put(key, value);
+    /**
+     * Returns whether the supplied cache loader has bulk load functionality.
+     */
+    default boolean hasLoadAll(CacheLoader<? super K, V> loader) {
+        try {
+            return !loader.getClass().getMethod("loadAll", Iterable.class).isDefault();
+        } catch (NoSuchMethodException | SecurityException e) {
+            logger.log(Level.WARNING, "Cannot determine if CacheLoader can bulk load", e);
+            return false;
         }
-      } catch (Throwable t) {
-        int remaining;
-        if (keys instanceof Collection<?>) {
-          remaining = ((Collection<?>) keys).size() - count;
-        } else {
-          remaining = 0;
-          while (iter.hasNext()) {
-            remaining++;
-            iter.next();
-          }
+    }
+
+    @Override
+    default V get(K key) {
+        return cache().computeIfAbsent(key, cacheLoader()::load);
+    }
+
+    @Override
+    default Map<K, V> getAll(Iterable<? extends K> keys) {
+        return hasBulkLoader() ? loadInBulk(keys) : loadSequentially(keys);
+    }
+
+    /**
+     * Sequentially loads each missing entry.
+     */
+    default Map<K, V> loadSequentially(Iterable<? extends K> keys) {
+        int count = 0;
+        Map<K, V> result = new HashMap<>();
+        Iterator<? extends K> iter = keys.iterator();
+        while (iter.hasNext()) {
+            K key = iter.next();
+            count++;
+            try {
+                V value = get(key);
+                if (value != null) {
+                    result.put(key, value);
+                }
+            } catch (Throwable t) {
+                int remaining;
+                if (keys instanceof Collection<?>) {
+                    remaining = ((Collection<?>) keys).size() - count;
+                } else {
+                    remaining = 0;
+                    while (iter.hasNext()) {
+                        remaining++;
+                        iter.next();
+                    }
+                }
+                cache().statsCounter().recordMisses(remaining);
+                throw t;
+            }
         }
-        cache().statsCounter().recordMisses(remaining);
-        throw t;
-      }
-    }
-    return Collections.unmodifiableMap(result);
-  }
-
-  /** Batch loads the missing entries. */
-  default Map<K, V> loadInBulk(Iterable<? extends K> keys) {
-    Map<K, V> found = cache().getAllPresent(keys);
-    List<K> keysToLoad = new ArrayList<>();
-    for (K key : keys) {
-      if (!found.containsKey(key)) {
-        keysToLoad.add(key);
-      }
-    }
-    if (keysToLoad.isEmpty()) {
-      return found;
+        return Collections.unmodifiableMap(result);
     }
 
-    Map<K, V> result = new HashMap<>(found);
-    bulkLoad(keysToLoad, result);
-    return Collections.unmodifiableMap(result);
-  }
-
-  /**
-   * Performs a non-blocking bulk load of the missing keys. Any missing entry that materializes
-   * during the load are replaced when the loaded entries are inserted into the cache.
-   */
-  default void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
-    boolean success = false;
-    long startTime = cache().ticker().read();
-    try {
-      @SuppressWarnings("unchecked")
-      Map<K, V> loaded = (Map<K, V>) cacheLoader().loadAll(keysToLoad);
-      cache().putAll(loaded);
-      for (K key : keysToLoad) {
-        V value = loaded.get(key);
-        if (value != null) {
-          result.put(key, value);
+    /**
+     * Batch loads the missing entries.
+     */
+    default Map<K, V> loadInBulk(Iterable<? extends K> keys) {
+        Map<K, V> found = cache().getAllPresent(keys);
+        List<K> keysToLoad = new ArrayList<>();
+        for (K key : keys) {
+            if (!found.containsKey(key)) {
+                keysToLoad.add(key);
+            }
         }
-      }
-      success = !loaded.isEmpty();
-    } finally {
-      long loadTime = cache().ticker().read() - startTime;
-      if (success) {
-        cache().statsCounter().recordLoadSuccess(loadTime);
-      } else {
-        cache().statsCounter().recordLoadFailure(loadTime);
-      }
-    }
-  }
+        if (keysToLoad.isEmpty()) {
+            return found;
+        }
 
-  @Override
-  default void refresh(K key) {
-    requireNonNull(key);
-    cache().executor().execute(() -> {
-      try {
-        BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) ->
-            (oldValue == null)  ? cacheLoader().load(key) : cacheLoader().reload(key, oldValue);
-        cache().compute(key, refreshFunction, false, false);
-      } catch (Throwable t) {
-        logger.log(Level.WARNING, "Exception thrown during refresh", t);
-      }
-    });
-  }
+        Map<K, V> result = new HashMap<>(found);
+        bulkLoad(keysToLoad, result);
+        return Collections.unmodifiableMap(result);
+    }
+
+    /**
+     * Performs a non-blocking bulk load of the missing keys. Any missing entry that materializes
+     * during the load are replaced when the loaded entries are inserted into the cache.
+     */
+    default void bulkLoad(List<K> keysToLoad, Map<K, V> result) {
+        boolean success = false;
+        long startTime = cache().ticker().read();
+        try {
+            @SuppressWarnings("unchecked")
+            Map<K, V> loaded = (Map<K, V>) cacheLoader().loadAll(keysToLoad);
+            cache().putAll(loaded);
+            for (K key : keysToLoad) {
+                V value = loaded.get(key);
+                if (value != null) {
+                    result.put(key, value);
+                }
+            }
+            success = !loaded.isEmpty();
+        } finally {
+            long loadTime = cache().ticker().read() - startTime;
+            if (success) {
+                cache().statsCounter().recordLoadSuccess(loadTime);
+            } else {
+                cache().statsCounter().recordLoadFailure(loadTime);
+            }
+        }
+    }
+
+    @Override
+    default void refresh(K key) {
+        requireNonNull(key);
+        cache().executor().execute(() -> {
+            try {
+                BiFunction<? super K, ? super V, ? extends V> refreshFunction = (k, oldValue) ->
+                        (oldValue == null) ? cacheLoader().load(key) : cacheLoader().reload(key, oldValue);
+                cache().compute(key, refreshFunction, false, false);
+            } catch (Throwable t) {
+                logger.log(Level.WARNING, "Exception thrown during refresh", t);
+            }
+        });
+    }
 }

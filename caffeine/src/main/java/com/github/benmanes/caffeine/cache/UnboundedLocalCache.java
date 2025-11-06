@@ -15,21 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.Objects.requireNonNull;
+import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import com.github.benmanes.caffeine.cache.tracing.Tracer;
 
+import javax.annotation.Nullable;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
-import java.util.AbstractCollection;
-import java.util.AbstractSet;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.Spliterator;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -37,10 +30,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
-import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import com.github.benmanes.caffeine.cache.tracing.Tracer;
+import static java.util.Objects.requireNonNull;
 
 /**
  * An in-memory cache that has no capabilities for bounding the map. This implementation provides
@@ -49,760 +39,783 @@ import com.github.benmanes.caffeine.cache.tracing.Tracer;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 final class UnboundedLocalCache<K, V> implements LocalCache<K, V> {
-  @Nullable final RemovalListener<K, V> removalListener;
-  final ConcurrentHashMap<K, V> data;
-  final Executor executor;
-  final Ticker ticker;
-  final long id;
+    @Nullable
+    final RemovalListener<K, V> removalListener;
+    final ConcurrentHashMap<K, V> data;
+    final Executor executor;
+    final Ticker ticker;
+    final long id;
 
-  transient Set<K> keySet;
-  transient Collection<V> values;
-  transient Set<Entry<K, V>> entrySet;
+    transient Set<K> keySet;
+    transient Collection<V> values;
+    transient Set<Entry<K, V>> entrySet;
 
-  boolean isRecordingStats;
-  StatsCounter statsCounter;
+    boolean isRecordingStats;
+    StatsCounter statsCounter;
 
-  UnboundedLocalCache(Caffeine<? super K, ? super V> builder, boolean async) {
-    this.data = new ConcurrentHashMap<K, V>(builder.getInitialCapacity());
-    this.statsCounter = builder.getStatsCounterSupplier().get();
-    this.removalListener = builder.getRemovalListener(async);
-    this.isRecordingStats = builder.isRecordingStats();
-    this.id = tracer().register(builder.name());
-    this.executor = builder.getExecutor();
-    this.ticker = builder.getTicker();
-  }
-
-  /* ---------------- Cache -------------- */
-
-  @Override
-  public V getIfPresent(Object key, boolean recordStats) {
-    V value = data.get(key);
-    tracer().recordRead(id, key);
-
-    if (recordStats) {
-      if (value == null) {
-        statsCounter.recordMisses(1);
-      } else {
-        statsCounter.recordHits(1);
-      }
+    UnboundedLocalCache(Caffeine<? super K, ? super V> builder, boolean async) {
+        this.data = new ConcurrentHashMap<K, V>(builder.getInitialCapacity());
+        this.statsCounter = builder.getStatsCounterSupplier().get();
+        this.removalListener = builder.getRemovalListener(async);
+        this.isRecordingStats = builder.isRecordingStats();
+        this.id = tracer().register(builder.name());
+        this.executor = builder.getExecutor();
+        this.ticker = builder.getTicker();
     }
-    return value;
-  }
 
-  @Override
-  public long estimatedSize() {
-    return data.mappingCount();
-  }
+    /* ---------------- Cache -------------- */
 
-  @Override
-  public Map<K, V> getAllPresent(Iterable<?> keys) {
-    int hits = 0;
-    int misses = 0;
-    Map<K, V> result = new LinkedHashMap<>();
-    for (Object key : keys) {
-      tracer().recordRead(id, key);
-      V value = data.get(key);
-      if (value == null) {
-        misses++;
-      } else {
-        hits++;
-        @SuppressWarnings("unchecked")
-        K castKey = (K) key;
-        result.put(castKey, value);
-      }
+    @Override
+    public V getIfPresent(Object key, boolean recordStats) {
+        V value = data.get(key);
+        tracer().recordRead(id, key);
+
+        if (recordStats) {
+            if (value == null) {
+                statsCounter.recordMisses(1);
+            } else {
+                statsCounter.recordHits(1);
+            }
+        }
+        return value;
     }
-    statsCounter.recordHits(hits);
-    statsCounter.recordMisses(misses);
-    return Collections.unmodifiableMap(result);
-  }
 
-  @Override
-  public void cleanUp() {}
+    @Override
+    public long estimatedSize() {
+        return data.mappingCount();
+    }
 
-  @Override
-  public StatsCounter statsCounter() {
-    return statsCounter;
-  }
+    @Override
+    public Map<K, V> getAllPresent(Iterable<?> keys) {
+        int hits = 0;
+        int misses = 0;
+        Map<K, V> result = new LinkedHashMap<>();
+        for (Object key : keys) {
+            tracer().recordRead(id, key);
+            V value = data.get(key);
+            if (value == null) {
+                misses++;
+            } else {
+                hits++;
+                @SuppressWarnings("unchecked")
+                K castKey = (K) key;
+                result.put(castKey, value);
+            }
+        }
+        statsCounter.recordHits(hits);
+        statsCounter.recordMisses(misses);
+        return Collections.unmodifiableMap(result);
+    }
 
-  void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
-    notifyRemoval(new RemovalNotification<K, V>(key, value, cause));
-  }
+    @Override
+    public void cleanUp() {
+    }
 
-  void notifyRemoval(RemovalNotification<K, V> notification) {
-    requireNonNull(removalListener, "Notification should be guarded with a check");
-    executor.execute(() -> removalListener.onRemoval(notification));
-  }
+    @Override
+    public StatsCounter statsCounter() {
+        return statsCounter;
+    }
 
-  boolean hasRemovalListener() {
-    return (removalListener != null);
-  }
+    void notifyRemoval(@Nullable K key, @Nullable V value, RemovalCause cause) {
+        notifyRemoval(new RemovalNotification<K, V>(key, value, cause));
+    }
 
-  @Override
-  public RemovalListener<K, V> removalListener() {
-    return removalListener;
-  }
+    void notifyRemoval(RemovalNotification<K, V> notification) {
+        requireNonNull(removalListener, "Notification should be guarded with a check");
+        executor.execute(() -> removalListener.onRemoval(notification));
+    }
 
-  @Override
-  public boolean isRecordingStats() {
-    return isRecordingStats;
-  }
+    boolean hasRemovalListener() {
+        return (removalListener != null);
+    }
 
-  @Override
-  public Ticker ticker() {
-    return ticker;
-  }
+    @Override
+    public RemovalListener<K, V> removalListener() {
+        return removalListener;
+    }
 
-  @Override
-  public Executor executor() {
-    return executor;
-  }
+    @Override
+    public boolean isRecordingStats() {
+        return isRecordingStats;
+    }
 
-  /* ---------------- JDK8+ Map extensions -------------- */
+    @Override
+    public Ticker ticker() {
+        return ticker;
+    }
 
-  @Override
-  public void forEach(BiConsumer<? super K, ? super V> action) {
-    data.forEach(action);
-  }
+    @Override
+    public Executor executor() {
+        return executor;
+    }
 
-  @Override
-  public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
-    requireNonNull(function);
-    if (!hasRemovalListener()) {
-      data.replaceAll((key, value) -> {
+    /* ---------------- JDK8+ Map extensions -------------- */
+
+    @Override
+    public void forEach(BiConsumer<? super K, ? super V> action) {
+        data.forEach(action);
+    }
+
+    @Override
+    public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
+        requireNonNull(function);
+        if (!hasRemovalListener()) {
+            data.replaceAll((key, value) -> {
+                tracer().recordWrite(id, key, 1);
+                return function.apply(key, value);
+            });
+            return;
+        }
+
+        // ensures that the removal notification is processed after the removal has completed
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        RemovalNotification<K, V>[] notification = new RemovalNotification[1];
+        data.replaceAll((key, value) -> {
+            tracer().recordWrite(id, key, 1);
+            if (notification[0] != null) {
+                notifyRemoval(notification[0]);
+                notification[0] = null;
+            }
+            V newValue = requireNonNull(function.apply(key, value));
+            notification[0] = new RemovalNotification<K, V>(key, value, RemovalCause.REPLACED);
+            return newValue;
+        });
+        if (notification[0] != null) {
+            notifyRemoval(notification[0]);
+        }
+    }
+
+    @Override
+    public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
+                             boolean isAsync) {
+        requireNonNull(mappingFunction);
         tracer().recordWrite(id, key, 1);
-        return function.apply(key, value);
-      });
-      return;
+
+        // optimistic fast path due to computeIfAbsent always locking
+        V value = data.get(key);
+        if (value != null) {
+            statsCounter.recordHits(1);
+            return value;
+        }
+
+        boolean[] missed = new boolean[1];
+        value = data.computeIfAbsent(key, k -> {
+            missed[0] = true;
+            try {
+                return statsAware(mappingFunction, isAsync).apply(key);
+            } catch (RuntimeException | Error e) {
+                throw e;
+            }
+        });
+        if (!missed[0]) {
+            statsCounter.recordHits(1);
+        }
+        return value;
     }
 
-    // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
-    data.replaceAll((key, value) -> {
-      tracer().recordWrite(id, key, 1);
-      if (notification[0] != null) {
-        notifyRemoval(notification[0]);
-        notification[0] = null;
-      }
-      V newValue = requireNonNull(function.apply(key, value));
-      notification[0] = new RemovalNotification<K, V>(key, value, RemovalCause.REPLACED);
-      return newValue;
-    });
-    if (notification[0] != null) {
-      notifyRemoval(notification[0]);
-    }
-  }
+    @Override
+    public V computeIfPresent(K key,
+                              BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        requireNonNull(remappingFunction);
+        tracer().recordWrite(id, key, 1);
 
-  @Override
-  public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction,
-      boolean isAsync) {
-    requireNonNull(mappingFunction);
-    tracer().recordWrite(id, key, 1);
-
-    // optimistic fast path due to computeIfAbsent always locking
-    V value = data.get(key);
-    if (value != null) {
-      statsCounter.recordHits(1);
-      return value;
+        // optimistic fast path due to computeIfAbsent always locking
+        if (!data.containsKey(key)) {
+            return null;
+        }
+        if (!hasRemovalListener()) {
+            return data.computeIfPresent(key, statsAware(remappingFunction, false, false));
+        }
+        // ensures that the removal notification is processed after the removal has completed
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        RemovalNotification<K, V>[] notification = new RemovalNotification[1];
+        V nv = data.computeIfPresent(key, (K k, V oldValue) -> {
+            V newValue = statsAware(remappingFunction, false, false).apply(k, oldValue);
+            notification[0] = (newValue == null)
+                    ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
+                    : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
+            return newValue;
+        });
+        if (notification[0] != null) {
+            notifyRemoval(notification[0]);
+        }
+        return nv;
     }
 
-    boolean[] missed = new boolean[1];
-    value = data.computeIfAbsent(key, k -> {
-      missed[0] = true;
-      try {
-        return statsAware(mappingFunction, isAsync).apply(key);
-      } catch (RuntimeException | Error e) {
-        throw e;
-      }
-    });
-    if (!missed[0]) {
-      statsCounter.recordHits(1);
-    }
-    return value;
-  }
+    @Override
+    public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
+                     boolean recordMiss, boolean isAsync) {
+        tracer().recordWrite(id, key, 1);
+        if (!hasRemovalListener()) {
+            return data.compute(key, statsAware(remappingFunction, recordMiss, isAsync));
+        }
 
-  @Override
-  public V computeIfPresent(K key,
-      BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-    requireNonNull(remappingFunction);
-    tracer().recordWrite(id, key, 1);
-
-    // optimistic fast path due to computeIfAbsent always locking
-    if (!data.containsKey(key)) {
-      return null;
-    }
-    if (!hasRemovalListener()) {
-      return data.computeIfPresent(key, statsAware(remappingFunction, false, false));
-    }
-    // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
-    V nv = data.computeIfPresent(key, (K k, V oldValue) -> {
-      V newValue = statsAware(remappingFunction, false, false).apply(k, oldValue);
-      notification[0] = (newValue == null)
-          ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
-          : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
-          return newValue;
-    });
-    if (notification[0] != null) {
-      notifyRemoval(notification[0]);
-    }
-    return nv;
-  }
-
-  @Override
-  public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction,
-      boolean recordMiss, boolean isAsync) {
-    tracer().recordWrite(id, key, 1);
-    if (!hasRemovalListener()) {
-      return data.compute(key, statsAware(remappingFunction, recordMiss, isAsync));
+        // ensures that the removal notification is processed after the removal has completed
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        RemovalNotification<K, V>[] notification = new RemovalNotification[1];
+        V nv = data.compute(key, (K k, V oldValue) -> {
+            V newValue = statsAware(remappingFunction, recordMiss, isAsync).apply(k, oldValue);
+            if (oldValue != null) {
+                notification[0] = (newValue == null)
+                        ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
+                        : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
+            }
+            return newValue;
+        });
+        if (notification[0] != null) {
+            notifyRemoval(notification[0]);
+        }
+        return nv;
     }
 
-    // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
-    V nv = data.compute(key, (K k, V oldValue) -> {
-      V newValue = statsAware(remappingFunction, recordMiss, isAsync).apply(k, oldValue);
-      if (oldValue != null) {
-        notification[0] = (newValue == null)
-            ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
-            : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
-      }
-      return newValue;
-    });
-    if (notification[0] != null) {
-      notifyRemoval(notification[0]);
-    }
-    return nv;
-  }
+    @Override
+    public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+        requireNonNull(remappingFunction);
+        tracer().recordWrite(id, key, 1);
+        if (!hasRemovalListener()) {
+            return data.merge(key, value, statsAware(remappingFunction));
+        }
 
-  @Override
-  public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-    requireNonNull(remappingFunction);
-    tracer().recordWrite(id, key, 1);
-    if (!hasRemovalListener()) {
-      return data.merge(key, value, statsAware(remappingFunction));
+        // ensures that the removal notification is processed after the removal has completed
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        RemovalNotification<K, V>[] notification = new RemovalNotification[1];
+        V nv = data.merge(key, value, (V oldValue, V val) -> {
+            V newValue = statsAware(remappingFunction).apply(oldValue, val);
+            notification[0] = (newValue == null)
+                    ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
+                    : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
+            return newValue;
+        });
+        if (notification[0] != null) {
+            notifyRemoval(notification[0]);
+        }
+        return nv;
     }
 
-    // ensures that the removal notification is processed after the removal has completed
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    RemovalNotification<K, V>[] notification = new RemovalNotification[1];
-    V nv = data.merge(key, value, (V oldValue, V val) -> {
-      V newValue = statsAware(remappingFunction).apply(oldValue, val);
-      notification[0] = (newValue == null)
-          ? new RemovalNotification<K, V>(key, oldValue, RemovalCause.EXPLICIT)
-          : new RemovalNotification<K, V>(key, oldValue, RemovalCause.REPLACED);
-      return newValue;
-    });
-    if (notification[0] != null) {
-      notifyRemoval(notification[0]);
-    }
-    return nv;
-  }
-
-  /* ---------------- Concurrent Map -------------- */
-
-  @Override
-  public boolean isEmpty() {
-    return data.isEmpty();
-  }
-
-  @Override
-  public void clear() {
-    if (!hasRemovalListener() && !Tracer.isEnabled()) {
-      data.clear();
-      return;
-    }
-    for (K key : data.keySet()) {
-      remove(key);
-    }
-  }
-
-  @Override
-  public int size() {
-    return data.size();
-  }
-
-  @Override
-  public boolean containsKey(Object key) {
-    return data.containsKey(key);
-  }
-
-  @Override
-  public boolean containsValue(Object value) {
-    return data.containsValue(value);
-  }
-
-  @Override
-  public V get(Object key) {
-    return getIfPresent(key, false);
-  }
-
-  @Override
-  public V put(K key, V value) {
-    V oldValue = data.put(key, value);
-    tracer().recordWrite(id, key, 1);
-    if (hasRemovalListener() && (oldValue != null) && (oldValue != value)) {
-      notifyRemoval(key, oldValue, RemovalCause.REPLACED);
-    }
-    return oldValue;
-  }
-
-  @Override
-  public V putIfAbsent(K key, V value) {
-    V oldValue = data.putIfAbsent(key, value);
-    tracer().recordWrite(id, key, 1);
-    return oldValue;
-  }
-
-  @Override
-  public void putAll(Map<? extends K, ? extends V> map) {
-    if (!hasRemovalListener() && !Tracer.isEnabled()) {
-      data.putAll(map);
-      return;
-    }
-    for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
-      put(entry.getKey(), entry.getValue());
-    }
-  }
-
-  @Override
-  public V remove(Object key) {
-    V value = data.remove(key);
-    tracer().recordDelete(id, key);
-    if (hasRemovalListener() && (value != null)) {
-      @SuppressWarnings("unchecked")
-      K castKey = (K) key;
-      notifyRemoval(castKey, value, RemovalCause.EXPLICIT);
-    }
-    return value;
-  }
-
-  @Override
-  public boolean remove(Object key, Object value) {
-    boolean removed = data.remove(key, value);
-    if (hasRemovalListener() && removed) {
-      @SuppressWarnings("unchecked")
-      K castKey = (K) key;
-      @SuppressWarnings("unchecked")
-      V castValue = (V) value;
-      notifyRemoval(castKey, castValue, RemovalCause.EXPLICIT);
-    }
-    tracer().recordDelete(id, key);
-    return removed;
-  }
-
-  @Override
-  public V replace(K key, V value) {
-    V prev = data.replace(key, value);
-    if (hasRemovalListener() && (prev != null) && (prev != value)) {
-      notifyRemoval(key, value, RemovalCause.REPLACED);
-    }
-    tracer().recordWrite(id, key, 1);
-    return prev;
-  }
-
-  @Override
-  public boolean replace(K key, V oldValue, V newValue) {
-    boolean replaced = data.replace(key, oldValue, newValue);
-    if (hasRemovalListener() && replaced  && (oldValue != newValue)) {
-      notifyRemoval(key, oldValue, RemovalCause.REPLACED);
-    }
-    tracer().recordWrite(id, key, 1);
-    return replaced;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    return data.equals(o);
-  }
-
-  @Override
-  public int hashCode() {
-    return data.hashCode();
-  }
-
-  @Override
-  public String toString() {
-    return data.toString();
-  }
-
-  @Override
-  public Set<K> keySet() {
-    final Set<K> ks = keySet;
-    return (ks == null) ? (keySet = new KeySetView<K>(this)) : ks;
-  }
-
-  @Override
-  public Collection<V> values() {
-    final Collection<V> vs = values;
-    return (vs == null) ? (values = new ValuesView(this)) : vs;
-  }
-
-  @Override
-  public Set<Entry<K, V>> entrySet() {
-    final Set<Entry<K, V>> es = entrySet;
-    return (es == null) ? (entrySet = new EntrySetView(this)) : es;
-  }
-
-  /** An adapter to safely externalize the keys. */
-  static final class KeySetView<K> extends AbstractSet<K> {
-    final UnboundedLocalCache<K, ?> local;
-
-    KeySetView(UnboundedLocalCache<K, ?> local) {
-      this.local = requireNonNull(local);
-    }
+    /* ---------------- Concurrent Map -------------- */
 
     @Override
     public boolean isEmpty() {
-      return local.isEmpty();
-    }
-
-    @Override
-    public int size() {
-      return local.size();
+        return data.isEmpty();
     }
 
     @Override
     public void clear() {
-      local.clear();
-    }
-
-    @Override
-    public boolean contains(Object o) {
-      return local.containsKey(o);
-    }
-
-    @Override
-    public boolean remove(Object obj) {
-      return (local.remove(obj) != null);
-    }
-
-    @Override
-    public Iterator<K> iterator() {
-      return new KeyIterator<K>(local);
-    }
-
-    @Override
-    public Spliterator<K> spliterator() {
-      return local.data.keySet().spliterator();
-    }
-  }
-
-  /** An adapter to safely externalize the key iterator. */
-  static final class KeyIterator<K> implements Iterator<K> {
-    final UnboundedLocalCache<K, ?> cache;
-    final Iterator<K> iterator;
-    K current;
-
-    KeyIterator(UnboundedLocalCache<K, ?> cache) {
-      this.cache = requireNonNull(cache);
-      this.iterator = cache.data.keySet().iterator();
-    }
-
-    @Override
-    public boolean hasNext() {
-      return iterator.hasNext();
-    }
-
-    @Override
-    public K next() {
-      current = iterator.next();
-      return current;
-    }
-
-    @Override
-    public void remove() {
-      Caffeine.requireState(current != null);
-      cache.remove(current);
-      current = null;
-    }
-  }
-
-  /** An adapter to safely externalize the values. */
-  final class ValuesView extends AbstractCollection<V> {
-    final UnboundedLocalCache<K, V> cache;
-
-    ValuesView(UnboundedLocalCache<K, V> cache) {
-      this.cache = requireNonNull(cache);
-    }
-
-    @Override
-    public boolean isEmpty() {
-      return cache.isEmpty();
+        if (!hasRemovalListener() && !Tracer.isEnabled()) {
+            data.clear();
+            return;
+        }
+        for (K key : data.keySet()) {
+            remove(key);
+        }
     }
 
     @Override
     public int size() {
-      return cache.size();
+        return data.size();
     }
 
     @Override
-    public void clear() {
-      cache.clear();
+    public boolean containsKey(Object key) {
+        return data.containsKey(key);
     }
 
     @Override
-    public boolean contains(Object o) {
-      return cache.containsValue(o);
+    public boolean containsValue(Object value) {
+        return data.containsValue(value);
     }
 
     @Override
-    public boolean remove(Object o) {
-      requireNonNull(o);
-      return super.remove(o);
+    public V get(Object key) {
+        return getIfPresent(key, false);
     }
 
     @Override
-    public Iterator<V> iterator() {
-      return new ValuesIterator<K, V>(cache);
+    public V put(K key, V value) {
+        V oldValue = data.put(key, value);
+        tracer().recordWrite(id, key, 1);
+        if (hasRemovalListener() && (oldValue != null) && (oldValue != value)) {
+            notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+        }
+        return oldValue;
     }
 
     @Override
-    public Spliterator<V> spliterator() {
-      return cache.data.values().spliterator();
-    }
-  }
-
-  /** An adapter to safely externalize the value iterator. */
-  static final class ValuesIterator<K, V> implements Iterator<V> {
-    final UnboundedLocalCache<K, V> cache;
-    final Iterator<Entry<K, V>> iterator;
-    Entry<K, V> entry;
-
-    ValuesIterator(UnboundedLocalCache<K, V> cache) {
-      this.cache = requireNonNull(cache);
-      this.iterator = cache.data.entrySet().iterator();
+    public V putIfAbsent(K key, V value) {
+        V oldValue = data.putIfAbsent(key, value);
+        tracer().recordWrite(id, key, 1);
+        return oldValue;
     }
 
     @Override
-    public boolean hasNext() {
-      return iterator.hasNext();
+    public void putAll(Map<? extends K, ? extends V> map) {
+        if (!hasRemovalListener() && !Tracer.isEnabled()) {
+            data.putAll(map);
+            return;
+        }
+        for (Entry<? extends K, ? extends V> entry : map.entrySet()) {
+            put(entry.getKey(), entry.getValue());
+        }
     }
 
     @Override
-    public V next() {
-      entry = iterator.next();
-      return entry.getValue();
+    public V remove(Object key) {
+        V value = data.remove(key);
+        tracer().recordDelete(id, key);
+        if (hasRemovalListener() && (value != null)) {
+            @SuppressWarnings("unchecked")
+            K castKey = (K) key;
+            notifyRemoval(castKey, value, RemovalCause.EXPLICIT);
+        }
+        return value;
     }
 
     @Override
-    public void remove() {
-      Caffeine.requireState(entry != null);
-      cache.remove(entry.getKey());
-      entry = null;
-    }
-  }
-
-  /** An adapter to safely externalize the entries. */
-  final class EntrySetView extends AbstractSet<Entry<K, V>> {
-    final UnboundedLocalCache<K, V> cache;
-
-    EntrySetView(UnboundedLocalCache<K, V> cache) {
-      this.cache = requireNonNull(cache);
+    public boolean remove(Object key, Object value) {
+        boolean removed = data.remove(key, value);
+        if (hasRemovalListener() && removed) {
+            @SuppressWarnings("unchecked")
+            K castKey = (K) key;
+            @SuppressWarnings("unchecked")
+            V castValue = (V) value;
+            notifyRemoval(castKey, castValue, RemovalCause.EXPLICIT);
+        }
+        tracer().recordDelete(id, key);
+        return removed;
     }
 
     @Override
-    public boolean isEmpty() {
-      return cache.isEmpty();
+    public V replace(K key, V value) {
+        V prev = data.replace(key, value);
+        if (hasRemovalListener() && (prev != null) && (prev != value)) {
+            notifyRemoval(key, value, RemovalCause.REPLACED);
+        }
+        tracer().recordWrite(id, key, 1);
+        return prev;
     }
 
     @Override
-    public int size() {
-      return cache.size();
+    public boolean replace(K key, V oldValue, V newValue) {
+        boolean replaced = data.replace(key, oldValue, newValue);
+        if (hasRemovalListener() && replaced && (oldValue != newValue)) {
+            notifyRemoval(key, oldValue, RemovalCause.REPLACED);
+        }
+        tracer().recordWrite(id, key, 1);
+        return replaced;
     }
 
     @Override
-    public void clear() {
-      cache.clear();
+    public boolean equals(Object o) {
+        return data.equals(o);
     }
 
     @Override
-    public boolean contains(Object o) {
-      if (!(o instanceof Entry<?, ?>)) {
-        return false;
-      }
-      Entry<?, ?> entry = (Entry<?, ?>) o;
-      V value = cache.get(entry.getKey());
-      return (value != null) && value.equals(entry.getValue());
+    public int hashCode() {
+        return data.hashCode();
     }
 
     @Override
-    public boolean remove(Object obj) {
-      if (!(obj instanceof Entry<?, ?>)) {
-        return false;
-      }
-      Entry<?, ?> entry = (Entry<?, ?>) obj;
-      return cache.remove(entry.getKey(), entry.getValue());
+    public String toString() {
+        return data.toString();
     }
 
     @Override
-    public Iterator<Entry<K, V>> iterator() {
-      return new EntryIterator<K, V>(cache);
+    public Set<K> keySet() {
+        final Set<K> ks = keySet;
+        return (ks == null) ? (keySet = new KeySetView<K>(this)) : ks;
     }
 
     @Override
-    public Spliterator<Entry<K, V>> spliterator() {
-      return cache.data.entrySet().spliterator();
-    }
-  }
-
-  /** An adapter to safely externalize the entry iterator. */
-  static final class EntryIterator<K, V> implements Iterator<Entry<K, V>> {
-    final UnboundedLocalCache<K, V> cache;
-    final Iterator<Entry<K, V>> iterator;
-    Entry<K, V> entry;
-
-    EntryIterator(UnboundedLocalCache<K, V> cache) {
-      this.cache = requireNonNull(cache);
-      this.iterator = cache.data.entrySet().iterator();
+    public Collection<V> values() {
+        final Collection<V> vs = values;
+        return (vs == null) ? (values = new ValuesView(this)) : vs;
     }
 
     @Override
-    public boolean hasNext() {
-      return iterator.hasNext();
+    public Set<Entry<K, V>> entrySet() {
+        final Set<Entry<K, V>> es = entrySet;
+        return (es == null) ? (entrySet = new EntrySetView(this)) : es;
     }
 
-    @Override
-    public Entry<K, V> next() {
-      entry = iterator.next();
-      return new WriteThroughEntry<K, V>(cache, entry.getKey(), entry.getValue());
+    /**
+     * An adapter to safely externalize the keys.
+     */
+    static final class KeySetView<K> extends AbstractSet<K> {
+        final UnboundedLocalCache<K, ?> local;
+
+        KeySetView(UnboundedLocalCache<K, ?> local) {
+            this.local = requireNonNull(local);
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return local.isEmpty();
+        }
+
+        @Override
+        public int size() {
+            return local.size();
+        }
+
+        @Override
+        public void clear() {
+            local.clear();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return local.containsKey(o);
+        }
+
+        @Override
+        public boolean remove(Object obj) {
+            return (local.remove(obj) != null);
+        }
+
+        @Override
+        public Iterator<K> iterator() {
+            return new KeyIterator<K>(local);
+        }
+
+        @Override
+        public Spliterator<K> spliterator() {
+            return local.data.keySet().spliterator();
+        }
     }
 
-    @Override
-    public void remove() {
-      Caffeine.requireState(entry != null);
-      cache.remove(entry.getKey());
-      entry = null;
-    }
-  }
+    /**
+     * An adapter to safely externalize the key iterator.
+     */
+    static final class KeyIterator<K> implements Iterator<K> {
+        final UnboundedLocalCache<K, ?> cache;
+        final Iterator<K> iterator;
+        K current;
 
-  /* ---------------- Manual Cache -------------- */
+        KeyIterator(UnboundedLocalCache<K, ?> cache) {
+            this.cache = requireNonNull(cache);
+            this.iterator = cache.data.keySet().iterator();
+        }
 
-  static class UnboundedLocalManualCache<K, V>
-      implements LocalManualCache<UnboundedLocalCache<K, V>, K, V>, Serializable {
-    private static final long serialVersionUID = 1;
+        @Override
+        public boolean hasNext() {
+            return iterator.hasNext();
+        }
 
-    final UnboundedLocalCache<K, V> cache;
-    Policy<K, V> policy;
+        @Override
+        public K next() {
+            current = iterator.next();
+            return current;
+        }
 
-    UnboundedLocalManualCache(Caffeine<K, V> builder) {
-      cache = new UnboundedLocalCache<>(builder, false);
-    }
-
-    @Override
-    public UnboundedLocalCache<K, V> cache() {
-      return cache;
-    }
-
-    @Override
-    public Policy<K, V> policy() {
-      return (policy == null) ? (policy = new UnboundedPolicy<>()) : policy;
-    }
-
-    private void readObject(ObjectInputStream stream) throws InvalidObjectException {
-      throw new InvalidObjectException("Proxy required");
+        @Override
+        public void remove() {
+            Caffeine.requireState(current != null);
+            cache.remove(current);
+            current = null;
+        }
     }
 
-    Object writeReplace() {
-      SerializationProxy<K, V> proxy = new SerializationProxy<>();
-      proxy.isRecordingStats = cache.isRecordingStats;
-      proxy.removalListener = cache.removalListener;
-      proxy.ticker = cache.ticker;
-      return proxy;
-    }
-  }
+    /**
+     * An adapter to safely externalize the values.
+     */
+    final class ValuesView extends AbstractCollection<V> {
+        final UnboundedLocalCache<K, V> cache;
 
-  /** An eviction policy that supports no boundings. */
-  static final class UnboundedPolicy<K, V> implements Policy<K, V> {
-    @Override public Optional<Eviction<K, V>> eviction() {
-      return Optional.empty();
-    }
-    @Override public Optional<Expiration<K, V>> expireAfterAccess() {
-      return Optional.empty();
-    }
-    @Override public Optional<Expiration<K, V>> expireAfterWrite() {
-      return Optional.empty();
-    }
-    @Override public Optional<Expiration<K, V>> refreshAfterWrite() {
-      return Optional.empty();
-    }
-  }
+        ValuesView(UnboundedLocalCache<K, V> cache) {
+            this.cache = requireNonNull(cache);
+        }
 
-  /* ---------------- Loading Cache -------------- */
+        @Override
+        public boolean isEmpty() {
+            return cache.isEmpty();
+        }
 
-  static final class UnboundedLocalLoadingCache<K, V> extends UnboundedLocalManualCache<K, V>
-      implements LocalLoadingCache<UnboundedLocalCache<K, V>, K, V> {
-    private static final long serialVersionUID = 1;
+        @Override
+        public int size() {
+            return cache.size();
+        }
 
-    final CacheLoader<? super K, V> loader;
-    final boolean hasBulkLoader;
+        @Override
+        public void clear() {
+            cache.clear();
+        }
 
-    UnboundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      super(builder);
-      this.loader = loader;
-      this.hasBulkLoader = hasLoadAll(loader);
-    }
+        @Override
+        public boolean contains(Object o) {
+            return cache.containsValue(o);
+        }
 
-    @Override
-    public CacheLoader<? super K, V> cacheLoader() {
-      return loader;
-    }
+        @Override
+        public boolean remove(Object o) {
+            requireNonNull(o);
+            return super.remove(o);
+        }
 
-    @Override
-    public boolean hasBulkLoader() {
-      return hasBulkLoader;
+        @Override
+        public Iterator<V> iterator() {
+            return new ValuesIterator<K, V>(cache);
+        }
+
+        @Override
+        public Spliterator<V> spliterator() {
+            return cache.data.values().spliterator();
+        }
     }
 
-    @Override
-    Object writeReplace() {
-      @SuppressWarnings("unchecked")
-      SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
-      proxy.loader = loader;
-      return proxy;
+    /**
+     * An adapter to safely externalize the value iterator.
+     */
+    static final class ValuesIterator<K, V> implements Iterator<V> {
+        final UnboundedLocalCache<K, V> cache;
+        final Iterator<Entry<K, V>> iterator;
+        Entry<K, V> entry;
+
+        ValuesIterator(UnboundedLocalCache<K, V> cache) {
+            this.cache = requireNonNull(cache);
+            this.iterator = cache.data.entrySet().iterator();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return iterator.hasNext();
+        }
+
+        @Override
+        public V next() {
+            entry = iterator.next();
+            return entry.getValue();
+        }
+
+        @Override
+        public void remove() {
+            Caffeine.requireState(entry != null);
+            cache.remove(entry.getKey());
+            entry = null;
+        }
     }
 
-    private void readObject(ObjectInputStream stream) throws InvalidObjectException {
-      throw new InvalidObjectException("Proxy required");
+    /**
+     * An adapter to safely externalize the entries.
+     */
+    final class EntrySetView extends AbstractSet<Entry<K, V>> {
+        final UnboundedLocalCache<K, V> cache;
+
+        EntrySetView(UnboundedLocalCache<K, V> cache) {
+            this.cache = requireNonNull(cache);
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return cache.isEmpty();
+        }
+
+        @Override
+        public int size() {
+            return cache.size();
+        }
+
+        @Override
+        public void clear() {
+            cache.clear();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            if (!(o instanceof Entry<?, ?>)) {
+                return false;
+            }
+            Entry<?, ?> entry = (Entry<?, ?>) o;
+            V value = cache.get(entry.getKey());
+            return (value != null) && value.equals(entry.getValue());
+        }
+
+        @Override
+        public boolean remove(Object obj) {
+            if (!(obj instanceof Entry<?, ?>)) {
+                return false;
+            }
+            Entry<?, ?> entry = (Entry<?, ?>) obj;
+            return cache.remove(entry.getKey(), entry.getValue());
+        }
+
+        @Override
+        public Iterator<Entry<K, V>> iterator() {
+            return new EntryIterator<K, V>(cache);
+        }
+
+        @Override
+        public Spliterator<Entry<K, V>> spliterator() {
+            return cache.data.entrySet().spliterator();
+        }
     }
-  }
 
-  /* ---------------- Async Loading Cache -------------- */
+    /**
+     * An adapter to safely externalize the entry iterator.
+     */
+    static final class EntryIterator<K, V> implements Iterator<Entry<K, V>> {
+        final UnboundedLocalCache<K, V> cache;
+        final Iterator<Entry<K, V>> iterator;
+        Entry<K, V> entry;
 
-  static final class UnboundedLocalAsyncLoadingCache<K, V>
-      extends LocalAsyncLoadingCache<UnboundedLocalCache<K, CompletableFuture<V>>, K, V>
-      implements Serializable {
-    private static final long serialVersionUID = 1;
+        EntryIterator(UnboundedLocalCache<K, V> cache) {
+            this.cache = requireNonNull(cache);
+            this.iterator = cache.data.entrySet().iterator();
+        }
 
-    Policy<K, V> policy;
+        @Override
+        public boolean hasNext() {
+            return iterator.hasNext();
+        }
 
-    UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
-      super(makeCache(builder), loader);
+        @Override
+        public Entry<K, V> next() {
+            entry = iterator.next();
+            return new WriteThroughEntry<K, V>(cache, entry.getKey(), entry.getValue());
+        }
+
+        @Override
+        public void remove() {
+            Caffeine.requireState(entry != null);
+            cache.remove(entry.getKey());
+            entry = null;
+        }
     }
 
-    @SuppressWarnings("unchecked")
-    static <K, V> UnboundedLocalCache<K, CompletableFuture<V>> makeCache(Caffeine<K, V> builder) {
-      return new UnboundedLocalCache<K, CompletableFuture<V>>(
-          (Caffeine<K, CompletableFuture<V>>) builder, true);
+    /* ---------------- Manual Cache -------------- */
+
+    static class UnboundedLocalManualCache<K, V>
+            implements LocalManualCache<UnboundedLocalCache<K, V>, K, V>, Serializable {
+        private static final long serialVersionUID = 1;
+
+        final UnboundedLocalCache<K, V> cache;
+        Policy<K, V> policy;
+
+        UnboundedLocalManualCache(Caffeine<K, V> builder) {
+            cache = new UnboundedLocalCache<>(builder, false);
+        }
+
+        @Override
+        public UnboundedLocalCache<K, V> cache() {
+            return cache;
+        }
+
+        @Override
+        public Policy<K, V> policy() {
+            return (policy == null) ? (policy = new UnboundedPolicy<>()) : policy;
+        }
+
+        private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+            throw new InvalidObjectException("Proxy required");
+        }
+
+        Object writeReplace() {
+            SerializationProxy<K, V> proxy = new SerializationProxy<>();
+            proxy.isRecordingStats = cache.isRecordingStats;
+            proxy.removalListener = cache.removalListener;
+            proxy.ticker = cache.ticker;
+            return proxy;
+        }
     }
 
-    @Override
-    protected Policy<K, V> policy() {
-      return (policy == null) ? (policy = new UnboundedPolicy<>()) : policy;
+    /**
+     * An eviction policy that supports no boundings.
+     */
+    static final class UnboundedPolicy<K, V> implements Policy<K, V> {
+        @Override
+        public Optional<Eviction<K, V>> eviction() {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Expiration<K, V>> expireAfterAccess() {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Expiration<K, V>> expireAfterWrite() {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Expiration<K, V>> refreshAfterWrite() {
+            return Optional.empty();
+        }
     }
 
-    private void readObject(ObjectInputStream stream) throws InvalidObjectException {
-      throw new InvalidObjectException("Proxy required");
+    /* ---------------- Loading Cache -------------- */
+
+    static final class UnboundedLocalLoadingCache<K, V> extends UnboundedLocalManualCache<K, V>
+            implements LocalLoadingCache<UnboundedLocalCache<K, V>, K, V> {
+        private static final long serialVersionUID = 1;
+
+        final CacheLoader<? super K, V> loader;
+        final boolean hasBulkLoader;
+
+        UnboundedLocalLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+            super(builder);
+            this.loader = loader;
+            this.hasBulkLoader = hasLoadAll(loader);
+        }
+
+        @Override
+        public CacheLoader<? super K, V> cacheLoader() {
+            return loader;
+        }
+
+        @Override
+        public boolean hasBulkLoader() {
+            return hasBulkLoader;
+        }
+
+        @Override
+        Object writeReplace() {
+            @SuppressWarnings("unchecked")
+            SerializationProxy<K, V> proxy = (SerializationProxy<K, V>) super.writeReplace();
+            proxy.loader = loader;
+            return proxy;
+        }
+
+        private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+            throw new InvalidObjectException("Proxy required");
+        }
     }
 
-    Object writeReplace() {
-      SerializationProxy<K, V> proxy = new SerializationProxy<>();
-      proxy.isRecordingStats = cache.isRecordingStats;
-      proxy.removalListener = cache.removalListener;
-      proxy.ticker = cache.ticker;
-      proxy.loader = loader;
-      proxy.async = true;
-      return proxy;
+    /* ---------------- Async Loading Cache -------------- */
+
+    static final class UnboundedLocalAsyncLoadingCache<K, V>
+            extends LocalAsyncLoadingCache<UnboundedLocalCache<K, CompletableFuture<V>>, K, V>
+            implements Serializable {
+        private static final long serialVersionUID = 1;
+
+        Policy<K, V> policy;
+
+        UnboundedLocalAsyncLoadingCache(Caffeine<K, V> builder, CacheLoader<? super K, V> loader) {
+            super(makeCache(builder), loader);
+        }
+
+        @SuppressWarnings("unchecked")
+        static <K, V> UnboundedLocalCache<K, CompletableFuture<V>> makeCache(Caffeine<K, V> builder) {
+            return new UnboundedLocalCache<K, CompletableFuture<V>>(
+                    (Caffeine<K, CompletableFuture<V>>) builder, true);
+        }
+
+        @Override
+        protected Policy<K, V> policy() {
+            return (policy == null) ? (policy = new UnboundedPolicy<>()) : policy;
+        }
+
+        private void readObject(ObjectInputStream stream) throws InvalidObjectException {
+            throw new InvalidObjectException("Proxy required");
+        }
+
+        Object writeReplace() {
+            SerializationProxy<K, V> proxy = new SerializationProxy<>();
+            proxy.isRecordingStats = cache.isRecordingStats;
+            proxy.removalListener = cache.removalListener;
+            proxy.ticker = cache.ticker;
+            proxy.loader = loader;
+            proxy.async = true;
+            return proxy;
+        }
     }
-  }
 }

@@ -15,12 +15,12 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
+
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A matcher that evaluates a {@link Cache#asMap()} to determine if it is in a valid state.
@@ -28,42 +28,42 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IsValidMapView<K, V> extends TypeSafeDiagnosingMatcher<Map<K, V>> {
-  Description description;
+    Description description;
 
-  @Override
-  public void describeTo(Description description) {
-    description.appendText("cache");
-    if (this.description != description) {
-      description.appendText(this.description.toString());
-    }
-  }
-
-  @Override
-  protected boolean matchesSafely(Map<K, V> map, Description description) {
-    this.description = description;
-
-    if (map instanceof BoundedLocalCache<?, ?>) {
-      BoundedLocalCache<K, V> cache = (BoundedLocalCache<K, V>) map;
-      return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(cache, description);
-    } else if (map instanceof UnboundedLocalCache<?, ?>) {
-      UnboundedLocalCache<K, V> cache = (UnboundedLocalCache<K, V>) map;
-      return IsValidUnboundedLocalCache.<K, V>valid().matchesSafely(cache, description);
-    } else if (map instanceof LocalAsyncLoadingCache.AsMapView<?, ?>) {
-      LocalAsyncLoadingCache.AsMapView<K, V> asMap = (LocalAsyncLoadingCache.AsMapView<K, V>) map;
-      if (asMap.delegate instanceof BoundedLocalCache<?, ?>) {
-        return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
-            (BoundedLocalCache<K, CompletableFuture<V>>) asMap.delegate, description);
-      } else if (asMap.delegate instanceof UnboundedLocalCache<?, ?>) {
-        return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
-            (UnboundedLocalCache<K, CompletableFuture<V>>) asMap.delegate, description);
-      }
+    @Override
+    public void describeTo(Description description) {
+        description.appendText("cache");
+        if (this.description != description) {
+            description.appendText(this.description.toString());
+        }
     }
 
-    return true;
-  }
+    @Override
+    protected boolean matchesSafely(Map<K, V> map, Description description) {
+        this.description = description;
 
-  @Factory
-  public static <K, V> IsValidMapView<K, V> validAsMap() {
-    return new IsValidMapView<K, V>();
-  }
+        if (map instanceof BoundedLocalCache<?, ?>) {
+            BoundedLocalCache<K, V> cache = (BoundedLocalCache<K, V>) map;
+            return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(cache, description);
+        } else if (map instanceof UnboundedLocalCache<?, ?>) {
+            UnboundedLocalCache<K, V> cache = (UnboundedLocalCache<K, V>) map;
+            return IsValidUnboundedLocalCache.<K, V>valid().matchesSafely(cache, description);
+        } else if (map instanceof LocalAsyncLoadingCache.AsMapView<?, ?>) {
+            LocalAsyncLoadingCache.AsMapView<K, V> asMap = (LocalAsyncLoadingCache.AsMapView<K, V>) map;
+            if (asMap.delegate instanceof BoundedLocalCache<?, ?>) {
+                return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
+                        (BoundedLocalCache<K, CompletableFuture<V>>) asMap.delegate, description);
+            } else if (asMap.delegate instanceof UnboundedLocalCache<?, ?>) {
+                return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
+                        (UnboundedLocalCache<K, CompletableFuture<V>>) asMap.delegate, description);
+            }
+        }
+
+        return true;
+    }
+
+    @Factory
+    public static <K, V> IsValidMapView<K, V> validAsMap() {
+        return new IsValidMapView<K, V>();
+    }
 }

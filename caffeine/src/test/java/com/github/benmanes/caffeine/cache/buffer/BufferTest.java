@@ -15,16 +15,15 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
 
 import java.util.Arrays;
 import java.util.Iterator;
 
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
-
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 /**
  * The tests cases for a read buffer strategy. This validates an implementation approach which can
@@ -34,50 +33,50 @@ import com.github.benmanes.caffeine.ConcurrentTestHarness;
  */
 public final class BufferTest {
 
-  @DataProvider
-  public Iterator<Object[]> buffers() {
-    return Arrays.stream(BufferType.values())
-        .map(factory -> new Object[] { factory.create() })
-        .iterator();
-  }
-
-  @Test(dataProvider = "buffers")
-  public void record(Buffer buffer) {
-    ConcurrentTestHarness.timeTasks(100, () -> {
-      for (int i = 0; i < 1000; i++) {
-        buffer.record();
-        Thread.yield();
-      }
-    });
-    long recorded = buffer.recorded();
-    assertThat(recorded, is((long) Buffer.MAX_SIZE));
-  }
-
-  @Test(dataProvider = "buffers")
-  public void drain(Buffer buffer) {
-    for (int i = 0; i < 2 * Buffer.MAX_SIZE; i++) {
-      buffer.record();
+    @DataProvider
+    public Iterator<Object[]> buffers() {
+        return Arrays.stream(BufferType.values())
+                .map(factory -> new Object[]{factory.create()})
+                .iterator();
     }
-    buffer.drain();
-    long drained = buffer.drained();
-    long recorded = buffer.recorded();
-    assertThat(drained, is(recorded));
-  }
 
-  @Test(dataProvider = "buffers")
-  public void recordAndDrain(Buffer buffer) {
-    ConcurrentTestHarness.timeTasks(100, () -> {
-      for (int i = 0; i < 1000; i++) {
-        boolean shouldDrain = buffer.record();
-        if (shouldDrain) {
-          buffer.drain();
+    @Test(dataProvider = "buffers")
+    public void record(Buffer buffer) {
+        ConcurrentTestHarness.timeTasks(100, () -> {
+            for (int i = 0; i < 1000; i++) {
+                buffer.record();
+                Thread.yield();
+            }
+        });
+        long recorded = buffer.recorded();
+        assertThat(recorded, is((long) Buffer.MAX_SIZE));
+    }
+
+    @Test(dataProvider = "buffers")
+    public void drain(Buffer buffer) {
+        for (int i = 0; i < 2 * Buffer.MAX_SIZE; i++) {
+            buffer.record();
         }
-        Thread.yield();
-      }
-    });
-    buffer.drain();
-    long drained = buffer.drained();
-    long recorded = buffer.recorded();
-    assertThat(drained, is(recorded));
-  }
+        buffer.drain();
+        long drained = buffer.drained();
+        long recorded = buffer.recorded();
+        assertThat(drained, is(recorded));
+    }
+
+    @Test(dataProvider = "buffers")
+    public void recordAndDrain(Buffer buffer) {
+        ConcurrentTestHarness.timeTasks(100, () -> {
+            for (int i = 0; i < 1000; i++) {
+                boolean shouldDrain = buffer.record();
+                if (shouldDrain) {
+                    buffer.drain();
+                }
+                Thread.yield();
+            }
+        });
+        buffer.drain();
+        long drained = buffer.drained();
+        long recorded = buffer.recorded();
+        assertThat(drained, is(recorded));
+    }
 }

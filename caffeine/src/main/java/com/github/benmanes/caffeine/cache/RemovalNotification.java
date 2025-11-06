@@ -15,14 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.Map.Entry;
-import java.util.Objects;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
+import java.util.Map.Entry;
+import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A notification of the removal of a single entry. The key and/or value may be null if they were
@@ -33,84 +32,90 @@ import javax.annotation.concurrent.Immutable;
  */
 @Immutable
 public final class RemovalNotification<K, V> implements Entry<K, V> {
-  @Nullable private final K key;
-  @Nullable private final V value;
-  private final RemovalCause cause;
+    @Nullable
+    private final K key;
+    @Nullable
+    private final V value;
+    private final RemovalCause cause;
 
-  /**
-   * Creates an entry representing a mapping from the specified key to the specified value.
-   *
-   * @param key the key represented by this entry
-   * @param value the value represented by this entry
-   * @param cause the reason for which the entry was removed
-   */
-  public RemovalNotification(@Nullable K key, @Nullable V value, @Nonnull RemovalCause cause) {
-    this.cause = requireNonNull(cause);
-    this.value = value;
-    this.key = key;
-  }
-
-  /**
-   * @return the cause for which the entry was removed
-   */
-  @Nonnull
-  public RemovalCause getCause() {
-    return cause;
-  }
-
-  /**
-   * Returns {@code true} if there was an automatic removal due to eviction (the cause is neither
-   * {@link RemovalCause#EXPLICIT} nor {@link RemovalCause#REPLACED}).
-   *
-   * @return if the entry was removed due to eviction
-   */
-  public boolean wasEvicted() {
-    return cause.wasEvicted();
-  }
-
-  /**
-   * Returns the key of the removed entry or null if it was garbage collected due to
-   * {@link Caffeine#weakKeys()} eviction.
-   */
-  @Override @Nullable
-  public K getKey() {
-    return key;
-  }
-
-  /**
-   * Returns the key of the removed entry or null if it was garbage collected due to
-   * {@link Caffeine#weakValues()} or {@link Caffeine#softValues()} eviction.
-   */
-  @Override @Nullable
-  public V getValue() {
-    return value;
-  }
-
-  @Override
-  public final V setValue(V value) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (o == this) {
-      return true;
-    } else if (!(o instanceof Entry<?, ?>)) {
-      return false;
+    /**
+     * Creates an entry representing a mapping from the specified key to the specified value.
+     *
+     * @param key   the key represented by this entry
+     * @param value the value represented by this entry
+     * @param cause the reason for which the entry was removed
+     */
+    public RemovalNotification(@Nullable K key, @Nullable V value, @Nonnull RemovalCause cause) {
+        this.cause = requireNonNull(cause);
+        this.value = value;
+        this.key = key;
     }
-    Entry<?, ?> entry = (Entry<?, ?>) o;
-    return Objects.equals(key, entry.getKey())
-        && Objects.equals(value, entry.getValue());
-  }
 
-  @Override
-  public int hashCode() {
-    return ((key == null) ? 0 : key.hashCode()) ^ ((value == null) ? 0 : value.hashCode());
-  }
+    /**
+     * @return the cause for which the entry was removed
+     */
+    @Nonnull
+    public RemovalCause getCause() {
+        return cause;
+    }
 
-  /** Returns a string representation of the form <code>{key}={value}</code>. */
-  @Override
-  public String toString() {
-    return key + "=" + value;
-  }
+    /**
+     * Returns {@code true} if there was an automatic removal due to eviction (the cause is neither
+     * {@link RemovalCause#EXPLICIT} nor {@link RemovalCause#REPLACED}).
+     *
+     * @return if the entry was removed due to eviction
+     */
+    public boolean wasEvicted() {
+        return cause.wasEvicted();
+    }
+
+    /**
+     * Returns the key of the removed entry or null if it was garbage collected due to
+     * {@link Caffeine#weakKeys()} eviction.
+     */
+    @Override
+    @Nullable
+    public K getKey() {
+        return key;
+    }
+
+    /**
+     * Returns the key of the removed entry or null if it was garbage collected due to
+     * {@link Caffeine#weakValues()} or {@link Caffeine#softValues()} eviction.
+     */
+    @Override
+    @Nullable
+    public V getValue() {
+        return value;
+    }
+
+    @Override
+    public final V setValue(V value) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        } else if (!(o instanceof Entry<?, ?>)) {
+            return false;
+        }
+        Entry<?, ?> entry = (Entry<?, ?>) o;
+        return Objects.equals(key, entry.getKey())
+                && Objects.equals(value, entry.getValue());
+    }
+
+    @Override
+    public int hashCode() {
+        return ((key == null) ? 0 : key.hashCode()) ^ ((value == null) ? 0 : value.hashCode());
+    }
+
+    /**
+     * Returns a string representation of the form <code>{key}={value}</code>.
+     */
+    @Override
+    public String toString() {
+        return key + "=" + value;
+    }
 }

@@ -15,22 +15,25 @@
  */
 package com.github.benmanes.caffeine;
 
-import java.util.concurrent.TimeUnit;
-
 import com.jayway.awaitility.Awaitility;
 import com.jayway.awaitility.core.ConditionFactory;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class Awaits {
 
-  private Awaits() {}
+    private Awaits() {
+    }
 
-  /** Returns a configured {@link ConditionFactory} that polls at a short interval. */
-  public static ConditionFactory await() {
-    return Awaitility.with()
-        .pollDelay(1, TimeUnit.MILLISECONDS).and()
-        .pollInterval(1, TimeUnit.MILLISECONDS);
-  }
+    /**
+     * Returns a configured {@link ConditionFactory} that polls at a short interval.
+     */
+    public static ConditionFactory await() {
+        return Awaitility.with()
+                .pollDelay(1, TimeUnit.MILLISECONDS).and()
+                .pollInterval(1, TimeUnit.MILLISECONDS);
+    }
 }

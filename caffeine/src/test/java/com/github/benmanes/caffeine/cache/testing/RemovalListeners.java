@@ -15,13 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
+import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.github.benmanes.caffeine.cache.RemovalNotification;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
-
-import com.github.benmanes.caffeine.cache.RemovalListener;
-import com.github.benmanes.caffeine.cache.RemovalNotification;
 
 /**
  * Some common removal listener implementations for tests.
@@ -30,51 +30,56 @@ import com.github.benmanes.caffeine.cache.RemovalNotification;
  */
 public final class RemovalListeners {
 
-  private RemovalListeners() {}
-
-  /** A removal listener that stores the notifications for inspection. */
-  public static <K, V> RemovalListener<K, V> consuming() {
-    return new ConsumingRemovalListener<K, V>();
-  }
-
-  /** A removal listener that throws an exception if a notification arrives. */
-  public static <K, V> RemovalListener<K, V> rejecting() {
-    return new RejectingRemovalListener<K, V>();
-  }
-
-  public static final class RejectingRemovalListener<K, V>
-      implements RemovalListener<K, V>, Serializable {
-    private static final long serialVersionUID = 1L;
-
-    public boolean reject = true;
-    public int rejected;
-
-    @Override
-    public void onRemoval(RemovalNotification<K, V> notification) {
-      if (reject) {
-        rejected++;
-        throw new RejectedExecutionException("Rejected eviction of " + notification);
-      }
-    }
-  }
-
-  public static final class ConsumingRemovalListener<K, V>
-      implements RemovalListener<K, V>, Serializable {
-    private static final long serialVersionUID = 1L;
-
-    private final List<RemovalNotification<K, V>> evicted;
-
-    public ConsumingRemovalListener() {
-      this.evicted = new ArrayList<>();
+    private RemovalListeners() {
     }
 
-    @Override
-    public synchronized void onRemoval(RemovalNotification<K, V> notification) {
-      evicted.add(notification);
+    /**
+     * A removal listener that stores the notifications for inspection.
+     */
+    public static <K, V> RemovalListener<K, V> consuming() {
+        return new ConsumingRemovalListener<K, V>();
     }
 
-    public List<RemovalNotification<K, V>> evicted() {
-      return evicted;
+    /**
+     * A removal listener that throws an exception if a notification arrives.
+     */
+    public static <K, V> RemovalListener<K, V> rejecting() {
+        return new RejectingRemovalListener<K, V>();
     }
-  }
+
+    public static final class RejectingRemovalListener<K, V>
+            implements RemovalListener<K, V>, Serializable {
+        private static final long serialVersionUID = 1L;
+
+        public boolean reject = true;
+        public int rejected;
+
+        @Override
+        public void onRemoval(RemovalNotification<K, V> notification) {
+            if (reject) {
+                rejected++;
+                throw new RejectedExecutionException("Rejected eviction of " + notification);
+            }
+        }
+    }
+
+    public static final class ConsumingRemovalListener<K, V>
+            implements RemovalListener<K, V>, Serializable {
+        private static final long serialVersionUID = 1L;
+
+        private final List<RemovalNotification<K, V>> evicted;
+
+        public ConsumingRemovalListener() {
+            this.evicted = new ArrayList<>();
+        }
+
+        @Override
+        public synchronized void onRemoval(RemovalNotification<K, V> notification) {
+            evicted.add(notification);
+        }
+
+        public List<RemovalNotification<K, V>> evicted() {
+            return evicted;
+        }
+    }
 }

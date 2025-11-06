@@ -15,14 +15,13 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.concurrent.CompletableFuture;
-
+import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalAsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncLoadingCache;
 import org.hamcrest.Description;
 import org.hamcrest.Factory;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import com.github.benmanes.caffeine.cache.BoundedLocalCache.BoundedLocalAsyncLoadingCache;
-import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyncLoadingCache;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A matcher that evaluates a {@link Cache} to determine if it is in a valid state.
@@ -30,58 +29,58 @@ import com.github.benmanes.caffeine.cache.UnboundedLocalCache.UnboundedLocalAsyn
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class IsValidCache<K, V>
-    extends TypeSafeDiagnosingMatcher<Cache<K, V>> {
-  Description description;
+        extends TypeSafeDiagnosingMatcher<Cache<K, V>> {
+    Description description;
 
-  @Override
-  public void describeTo(Description description) {
-    description.appendText("cache");
-    if (this.description != description) {
-      description.appendText(description.toString());
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  protected boolean matchesSafely(Cache<K, V> cache, Description description) {
-    this.description = description;
-
-    if (cache instanceof BoundedLocalCache.BoundedLocalManualCache<?, ?>) {
-      BoundedLocalCache.BoundedLocalManualCache<K, V> local =
-          (BoundedLocalCache.BoundedLocalManualCache<K, V>) cache;
-      return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
-    } else if (cache instanceof LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) {
-      LocalAsyncLoadingCache<?, ?, ?> async =
-          ((LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) cache).getOuter();
-      if (async instanceof BoundedLocalAsyncLoadingCache<?, ?>) {
-        return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
-            ((BoundedLocalAsyncLoadingCache<K, V>) async).cache, description);
-      }
+    @Override
+    public void describeTo(Description description) {
+        description.appendText("cache");
+        if (this.description != description) {
+            description.appendText(description.toString());
+        }
     }
 
-    if (cache instanceof UnboundedLocalCache.UnboundedLocalManualCache<?, ?>) {
-      UnboundedLocalCache.UnboundedLocalManualCache<K, V> local =
-          (UnboundedLocalCache.UnboundedLocalManualCache<K, V>) cache;
-      return IsValidUnboundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
-    } else if (cache instanceof LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) {
-      LocalAsyncLoadingCache<?, ?, ?> async =
-          ((LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) cache).getOuter();
-      if (async instanceof UnboundedLocalAsyncLoadingCache<?, ?>) {
-        return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
-            ((UnboundedLocalAsyncLoadingCache<K, V>) async).cache, description);
-      }
+    @SuppressWarnings("unchecked")
+    @Override
+    protected boolean matchesSafely(Cache<K, V> cache, Description description) {
+        this.description = description;
 
-      UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>.LoadingCacheView local =
-          (UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>.LoadingCacheView) cache;
-      return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
-          local.getOuter().cache, description);
+        if (cache instanceof BoundedLocalCache.BoundedLocalManualCache<?, ?>) {
+            BoundedLocalCache.BoundedLocalManualCache<K, V> local =
+                    (BoundedLocalCache.BoundedLocalManualCache<K, V>) cache;
+            return IsValidBoundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
+        } else if (cache instanceof LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) {
+            LocalAsyncLoadingCache<?, ?, ?> async =
+                    ((LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) cache).getOuter();
+            if (async instanceof BoundedLocalAsyncLoadingCache<?, ?>) {
+                return IsValidBoundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
+                        ((BoundedLocalAsyncLoadingCache<K, V>) async).cache, description);
+            }
+        }
+
+        if (cache instanceof UnboundedLocalCache.UnboundedLocalManualCache<?, ?>) {
+            UnboundedLocalCache.UnboundedLocalManualCache<K, V> local =
+                    (UnboundedLocalCache.UnboundedLocalManualCache<K, V>) cache;
+            return IsValidUnboundedLocalCache.<K, V>valid().matchesSafely(local.cache, description);
+        } else if (cache instanceof LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) {
+            LocalAsyncLoadingCache<?, ?, ?> async =
+                    ((LocalAsyncLoadingCache<?, ?, ?>.LoadingCacheView) cache).getOuter();
+            if (async instanceof UnboundedLocalAsyncLoadingCache<?, ?>) {
+                return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
+                        ((UnboundedLocalAsyncLoadingCache<K, V>) async).cache, description);
+            }
+
+            UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>.LoadingCacheView local =
+                    (UnboundedLocalCache.UnboundedLocalAsyncLoadingCache<K, V>.LoadingCacheView) cache;
+            return IsValidUnboundedLocalCache.<K, CompletableFuture<V>>valid().matchesSafely(
+                    local.getOuter().cache, description);
+        }
+
+        return true;
     }
 
-    return true;
-  }
-
-  @Factory
-  public static <K, V> IsValidCache<K, V> validCache() {
-    return new IsValidCache<K, V>();
-  }
+    @Factory
+    public static <K, V> IsValidCache<K, V> validCache() {
+        return new IsValidCache<K, V>();
+    }
 }

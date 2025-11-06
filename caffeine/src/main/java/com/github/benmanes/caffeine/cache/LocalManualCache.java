@@ -15,15 +15,14 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static java.util.Objects.requireNonNull;
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
-import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This class provides a skeletal implementation of the {@link Cache} interface to minimize the
@@ -33,67 +32,69 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
  */
 interface LocalManualCache<C extends LocalCache<K, V>, K, V> extends Cache<K, V> {
 
-  /** Returns the backing {@link LocalCache} data store. */
-  C cache();
+    /**
+     * Returns the backing {@link LocalCache} data store.
+     */
+    C cache();
 
-  @Override
-  default long estimatedSize() {
-    return cache().estimatedSize();
-  }
+    @Override
+    default long estimatedSize() {
+        return cache().estimatedSize();
+    }
 
-  @Override
-  default void cleanUp() {
-    cache().cleanUp();
-  }
+    @Override
+    default void cleanUp() {
+        cache().cleanUp();
+    }
 
-  @Override
-  default @Nullable V getIfPresent(Object key) {
-    return cache().getIfPresent(key, true);
-  }
+    @Override
+    default @Nullable V getIfPresent(Object key) {
+        return cache().getIfPresent(key, true);
+    }
 
-  @Override
-  default V get(K key, Function<? super K, ? extends V> mappingFunction) {
-    return cache().computeIfAbsent(key, mappingFunction);
-  }
+    @Override
+    default V get(K key, Function<? super K, ? extends V> mappingFunction) {
+        return cache().computeIfAbsent(key, mappingFunction);
+    }
 
-  @Override
-  default Map<K, V> getAllPresent(Iterable<?> keys) {
-    return cache().getAllPresent(keys);
-  }
+    @Override
+    default Map<K, V> getAllPresent(Iterable<?> keys) {
+        return cache().getAllPresent(keys);
+    }
 
-  @Override
-  default void put(K key, V value) {
-    cache().put(key, value);
-  }
+    @Override
+    default void put(K key, V value) {
+        cache().put(key, value);
+    }
 
-  @Override
-  default void putAll(Map<? extends K, ? extends V> map) {
-    cache().putAll(map);
-  }
+    @Override
+    default void putAll(Map<? extends K, ? extends V> map) {
+        cache().putAll(map);
+    }
 
-  @Override
-  default void invalidate(Object key) {
-    requireNonNull(key);
-    cache().remove(key);
-  }
+    @Override
+    default void invalidate(Object key) {
+        requireNonNull(key);
+        cache().remove(key);
+    }
 
-  @Override
-  default void invalidateAll() {
-    cache().clear();
-  }
+    @Override
+    default void invalidateAll() {
+        cache().clear();
+    }
 
-  @Override
-  default void invalidateAll(Iterable<?> keys) {
-    cache().invalidateAll(keys);
-  }
+    @Override
+    default void invalidateAll(Iterable<?> keys) {
+        cache().invalidateAll(keys);
+    }
 
-  @Override
-  default CacheStats stats() {
-    return cache().statsCounter().snapshot();
-  }
+    @Override
+    default CacheStats stats() {
+        return cache().statsCounter().snapshot();
+    }
 
-  @Override
-  default ConcurrentMap<K, V> asMap() {
-    return cache();
-  }
+    @Override
+    default ConcurrentMap<K, V> asMap() {
+        return cache();
+    }
 }

@@ -15,18 +15,20 @@
  */
 package com.github.benmanes.caffeine.cache.testing;
 
-import static java.lang.annotation.ElementType.PARAMETER;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import com.github.benmanes.caffeine.cache.Policy.Expiration;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import com.github.benmanes.caffeine.cache.Policy.Expiration;
+import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * An annotation to qualify the parameterized {@link Expiration}.
  *
  * @author ben.manes@gmail.com (Ben Manes)
  */
-@Target(PARAMETER) @Retention(RUNTIME)
-public @interface ExpireAfterWrite {}
+@Target(PARAMETER)
+@Retention(RUNTIME)
+public @interface ExpireAfterWrite {
+}

@@ -21,26 +21,30 @@ package com.github.benmanes.caffeine.cache.buffer;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public enum BufferType {
-  OneShotBuffer {
-    @Override public Buffer create() {
-      return new OneShotBuffer();
-    }
-  },
-  MpscArrayBuffer {
-    @Override public Buffer create() {
-      return new MpscArrayBuffer();
-    }
-  },
-  MpmcArrayBuffer {
-    @Override public Buffer create() {
-      return new MpmcArrayBuffer();
-    }
-  },
-  MpscCompoundBuffer {
-    @Override public Buffer create() {
-      return new MpscCompoundBuffer();
-    }
-  };
+    OneShotBuffer {
+        @Override
+        public Buffer create() {
+            return new OneShotBuffer();
+        }
+    },
+    MpscArrayBuffer {
+        @Override
+        public Buffer create() {
+            return new MpscArrayBuffer();
+        }
+    },
+    MpmcArrayBuffer {
+        @Override
+        public Buffer create() {
+            return new MpmcArrayBuffer();
+        }
+    },
+    MpscCompoundBuffer {
+        @Override
+        public Buffer create() {
+            return new MpscCompoundBuffer();
+        }
+    };
 
-  public abstract Buffer create();
+    public abstract Buffer create();
 }

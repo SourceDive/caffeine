@@ -15,14 +15,13 @@
  */
 package com.github.benmanes.caffeine.matchers;
 
-import java.util.function.Supplier;
-
+import com.google.common.base.Throwables;
 import org.hamcrest.Description;
 import org.hamcrest.Description.NullDescription;
 import org.hamcrest.Matcher;
 import org.hamcrest.StringDescription;
 
-import com.google.common.base.Throwables;
+import java.util.function.Supplier;
 
 /**
  * Assists in implementing {@link org.hamcrest.Matcher}s.
@@ -30,55 +29,55 @@ import com.google.common.base.Throwables;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class DescriptionBuilder {
-  private final Description description;
-  private boolean matches;
+    private final Description description;
+    private boolean matches;
 
-  public DescriptionBuilder(Description description) {
-    this.description = (description instanceof NullDescription)
-        ? new StringDescription()
-        : description;
-    this.matches = true;
-  }
-
-  public <T> DescriptionBuilder expectThat(Supplier<String> reason, T actual, Matcher<? super T> matcher) {
-    if (!matcher.matches(actual)) {
-      addError(reason.get(), actual, matcher);
+    public DescriptionBuilder(Description description) {
+        this.description = (description instanceof NullDescription)
+                ? new StringDescription()
+                : description;
+        this.matches = true;
     }
-    return this;
-  }
 
-  public <T> DescriptionBuilder expectThat(String reason, T actual, Matcher<? super T> matcher) {
-    if (!matcher.matches(actual)) {
-      addError(reason, actual, matcher);
+    public <T> DescriptionBuilder expectThat(Supplier<String> reason, T actual, Matcher<? super T> matcher) {
+        if (!matcher.matches(actual)) {
+            addError(reason.get(), actual, matcher);
+        }
+        return this;
     }
-    return this;
-  }
 
-  private <T> void addError(String reason, T actual, Matcher<? super T> matcher) {
-    description.appendText(reason)
-      .appendText("\nExpected: ")
-      .appendDescriptionOf(matcher)
-      .appendText("\n     but: ");
-    matcher.describeMismatch(actual, description);
-    description.appendText("\nLocation: ")
-      .appendText(Throwables.getStackTraceAsString(new Exception()));
+    public <T> DescriptionBuilder expectThat(String reason, T actual, Matcher<? super T> matcher) {
+        if (!matcher.matches(actual)) {
+            addError(reason, actual, matcher);
+        }
+        return this;
+    }
 
-    matches = false;
-  }
+    private <T> void addError(String reason, T actual, Matcher<? super T> matcher) {
+        description.appendText(reason)
+                .appendText("\nExpected: ")
+                .appendDescriptionOf(matcher)
+                .appendText("\n     but: ");
+        matcher.describeMismatch(actual, description);
+        description.appendText("\nLocation: ")
+                .appendText(Throwables.getStackTraceAsString(new Exception()));
 
-  public <T> DescriptionBuilder expected(String reason) {
-    description.appendText(reason).appendText("\nExpected to not be reachable");
-    description.appendText("\nLocation: ").appendText(
-        Throwables.getStackTraceAsString(new Exception()));
-    matches = false;
-    return this;
-  }
+        matches = false;
+    }
 
-  public Description getDescription() {
-    return description;
-  }
+    public <T> DescriptionBuilder expected(String reason) {
+        description.appendText(reason).appendText("\nExpected to not be reachable");
+        description.appendText("\nLocation: ").appendText(
+                Throwables.getStackTraceAsString(new Exception()));
+        matches = false;
+        return this;
+    }
 
-  public boolean matches() {
-    return matches;
-  }
+    public Description getDescription() {
+        return description;
+    }
+
+    public boolean matches() {
+        return matches;
+    }
 }

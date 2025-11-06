@@ -15,75 +15,76 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
-
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Group;
-import org.openjdk.jmh.annotations.GroupThreads;
-import org.openjdk.jmh.annotations.Param;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.State;
-
 import com.github.benmanes.caffeine.cache.simulator.generator.IntegerGenerator;
 import com.github.benmanes.caffeine.cache.simulator.generator.ScrambledZipfianGenerator;
+import org.openjdk.jmh.annotations.*;
+
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 @State(Scope.Group)
 public class GetPutBenchmark {
-  private static final int SIZE = (2 << 14);
-  private static final int MASK = SIZE - 1;
+    private static final int SIZE = (2 << 14);
+    private static final int MASK = SIZE - 1;
 
-  @Param({
-    "LinkedHashMap_Lru",
-    "ConcurrentLinkedHashMap",
-    "Caffeine",
-    "Guava",
-  })
-  CacheType cacheType;
+    @Param({
+            "LinkedHashMap_Lru",
+            "ConcurrentLinkedHashMap",
+            "Caffeine",
+            "Guava",
+    })
+    CacheType cacheType;
 
-  Map<Integer, Boolean> cache;
-  Integer[] ints;
+    Map<Integer, Boolean> cache;
+    Integer[] ints;
 
-  @State(Scope.Thread)
-  public static class ThreadState {
-    int index = ThreadLocalRandom.current().nextInt();
-  }
-
-  @Setup
-  public void setup() {
-    cache = cacheType.create(2 * SIZE, 64);
-    for (int i = 0; i < SIZE; i++) {
-      cache.put(i, Boolean.TRUE);
+    @State(Scope.Thread)
+    public static class ThreadState {
+        int index = ThreadLocalRandom.current().nextInt();
     }
 
-    ints = new Integer[SIZE];
-    IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
-    for (int i = 0; i < SIZE; i++) {
-      ints[i] = generator.nextInt();
+    @Setup
+    public void setup() {
+        cache = cacheType.create(2 * SIZE, 64);
+        for (int i = 0; i < SIZE; i++) {
+            cache.put(i, Boolean.TRUE);
+        }
+
+        ints = new Integer[SIZE];
+        IntegerGenerator generator = new ScrambledZipfianGenerator(SIZE);
+        for (int i = 0; i < SIZE; i++) {
+            ints[i] = generator.nextInt();
+        }
     }
-  }
 
-  @Benchmark @Group("read_only") @GroupThreads(8)
-  public void readOnly(ThreadState threadState) {
-    cache.get(ints[threadState.index++ & MASK]);
-  }
+    @Benchmark
+    @Group("read_only")
+    @GroupThreads(8)
+    public void readOnly(ThreadState threadState) {
+        cache.get(ints[threadState.index++ & MASK]);
+    }
 
-  @Benchmark @Group("write_only") @GroupThreads(8)
-  public void writeOnly(ThreadState threadState) {
-    cache.put(ints[threadState.index++ & MASK], Boolean.FALSE);
-  }
+    @Benchmark
+    @Group("write_only")
+    @GroupThreads(8)
+    public void writeOnly(ThreadState threadState) {
+        cache.put(ints[threadState.index++ & MASK], Boolean.FALSE);
+    }
 
-  @Benchmark @Group("readwrite") @GroupThreads(6)
-  public void readwrite_get(ThreadState threadState) {
-    cache.get(ints[threadState.index++ & MASK]);
-  }
+    @Benchmark
+    @Group("readwrite")
+    @GroupThreads(6)
+    public void readwrite_get(ThreadState threadState) {
+        cache.get(ints[threadState.index++ & MASK]);
+    }
 
-  @Benchmark @Group("readwrite") @GroupThreads(2)
-  public void readwrite_put(ThreadState threadState) {
-    cache.put(ints[threadState.index++ & MASK], Boolean.FALSE);
-  }
+    @Benchmark
+    @Group("readwrite")
+    @GroupThreads(2)
+    public void readwrite_put(ThreadState threadState) {
+        cache.put(ints[threadState.index++ & MASK], Boolean.FALSE);
+    }
 }

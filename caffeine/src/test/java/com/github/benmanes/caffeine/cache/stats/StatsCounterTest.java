@@ -15,59 +15,58 @@
  */
 package com.github.benmanes.caffeine.cache.stats;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-
+import com.github.benmanes.caffeine.ConcurrentTestHarness;
 import org.testng.annotations.Test;
 
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class StatsCounterTest {
 
-  @Test
-  public void disabled() {
-    StatsCounter counter = DisabledStatsCounter.INSTANCE;
-    counter.recordHits(1);
-    counter.recordMisses(1);
-    counter.recordLoadSuccess(1);
-    counter.recordLoadFailure(1);
-    assertThat(counter.snapshot(), is(new CacheStats(0, 0, 0, 0, 0, 0)));
-    assertThat(counter.toString(), is(new CacheStats(0, 0, 0, 0, 0, 0).toString()));
+    @Test
+    public void disabled() {
+        StatsCounter counter = DisabledStatsCounter.INSTANCE;
+        counter.recordHits(1);
+        counter.recordMisses(1);
+        counter.recordLoadSuccess(1);
+        counter.recordLoadFailure(1);
+        assertThat(counter.snapshot(), is(new CacheStats(0, 0, 0, 0, 0, 0)));
+        assertThat(counter.toString(), is(new CacheStats(0, 0, 0, 0, 0, 0).toString()));
 
-    for (DisabledStatsCounter type : DisabledStatsCounter.values()) {
-      assertThat(DisabledStatsCounter.valueOf(type.name()), is(counter));
+        for (DisabledStatsCounter type : DisabledStatsCounter.values()) {
+            assertThat(DisabledStatsCounter.valueOf(type.name()), is(counter));
+        }
     }
-  }
 
-  @Test
-  public void enabled() {
-    ConcurrentStatsCounter counter = new ConcurrentStatsCounter();
-    counter.recordHits(1);
-    counter.recordMisses(1);
-    counter.recordEviction();
-    counter.recordLoadSuccess(1);
-    counter.recordLoadFailure(1);
-    assertThat(counter.snapshot(), is(new CacheStats(1, 1, 1, 1, 2, 1)));
-    assertThat(counter.toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
-    assertThat(counter.snapshot().toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
+    @Test
+    public void enabled() {
+        ConcurrentStatsCounter counter = new ConcurrentStatsCounter();
+        counter.recordHits(1);
+        counter.recordMisses(1);
+        counter.recordEviction();
+        counter.recordLoadSuccess(1);
+        counter.recordLoadFailure(1);
+        assertThat(counter.snapshot(), is(new CacheStats(1, 1, 1, 1, 2, 1)));
+        assertThat(counter.toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
+        assertThat(counter.snapshot().toString(), is(new CacheStats(1, 1, 1, 1, 2, 1).toString()));
 
-    counter.incrementBy(counter);
-    assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 2)));
-  }
+        counter.incrementBy(counter);
+        assertThat(counter.snapshot(), is(new CacheStats(2, 2, 2, 2, 4, 2)));
+    }
 
-  @Test
-  public void concurrent() {
-    StatsCounter counter = new ConcurrentStatsCounter();
-    ConcurrentTestHarness.timeTasks(5, () -> {
-      counter.recordHits(1);
-      counter.recordMisses(1);
-      counter.recordEviction();
-      counter.recordLoadSuccess(1);
-      counter.recordLoadFailure(1);
-    });
-    assertThat(counter.snapshot(), is(new CacheStats(5, 5, 5, 5, 10, 5)));
-  }
+    @Test
+    public void concurrent() {
+        StatsCounter counter = new ConcurrentStatsCounter();
+        ConcurrentTestHarness.timeTasks(5, () -> {
+            counter.recordHits(1);
+            counter.recordMisses(1);
+            counter.recordEviction();
+            counter.recordLoadSuccess(1);
+            counter.recordLoadFailure(1);
+        });
+        assertThat(counter.snapshot(), is(new CacheStats(5, 5, 5, 5, 10, 5)));
+    }
 }

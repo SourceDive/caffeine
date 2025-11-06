@@ -15,18 +15,17 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
+import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
-
-import com.github.benmanes.caffeine.ConcurrentTestHarness;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
 
 /**
  * The tests cases for the {@link BoundedBuffer}.
@@ -34,51 +33,51 @@ import com.github.benmanes.caffeine.ConcurrentTestHarness;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class BoundedBufferTest {
-  static final String DUMMY = "test";
+    static final String DUMMY = "test";
 
-  @DataProvider
-  public Object[][] buffer() {
-    return new Object[][] {{ new BoundedBuffer<String>() }};
-  }
-
-  @Test(dataProvider = "buffer")
-  public void submit(BoundedBuffer<String> buffer) {
-    ConcurrentTestHarness.timeTasks(10, () -> {
-      for (int i = 0; i < 100; i++) {
-        buffer.submit(DUMMY);
-      }
-    });
-    assertThat(buffer.writes(), is(greaterThan(0)));
-    assertThat(buffer.writes(), is(buffer.size()));
-  }
-
-  @Test(dataProvider = "buffer")
-  public void drain(BoundedBuffer<String> buffer) {
-    for (int i = 0; i < BoundedBuffer.RING_BUFFER_SIZE; i++) {
-      buffer.submit(DUMMY);
+    @DataProvider
+    public Object[][] buffer() {
+        return new Object[][]{{new BoundedBuffer<String>()}};
     }
-    int[] read = new int[1];
-    buffer.drain(e -> read[0]++);
-    assertThat(read[0], is(buffer.reads()));
-    assertThat(read[0], is(buffer.writes()));
-  }
 
-  @Test(dataProvider = "buffer")
-  public void submitAndDrain(BoundedBuffer<String> buffer) {
-    Lock lock = new ReentrantLock();
-    AtomicInteger reads = new AtomicInteger();
-    ConcurrentTestHarness.timeTasks(10, () -> {
-      for (int i = 0; i < 1000; i++) {
-        boolean shouldDrain = buffer.submit(DUMMY);
-        if (shouldDrain && lock.tryLock()) {
-          buffer.drain(e -> reads.incrementAndGet());
-          lock.unlock();
+    @Test(dataProvider = "buffer")
+    public void submit(BoundedBuffer<String> buffer) {
+        ConcurrentTestHarness.timeTasks(10, () -> {
+            for (int i = 0; i < 100; i++) {
+                buffer.submit(DUMMY);
+            }
+        });
+        assertThat(buffer.writes(), is(greaterThan(0)));
+        assertThat(buffer.writes(), is(buffer.size()));
+    }
+
+    @Test(dataProvider = "buffer")
+    public void drain(BoundedBuffer<String> buffer) {
+        for (int i = 0; i < BoundedBuffer.RING_BUFFER_SIZE; i++) {
+            buffer.submit(DUMMY);
         }
-        Thread.yield();
-      }
-    });
-    buffer.drain(e -> reads.incrementAndGet());
-    assertThat(reads.intValue(), is(buffer.reads()));
-    assertThat(reads.intValue(), is(buffer.writes()));
-  }
+        int[] read = new int[1];
+        buffer.drain(e -> read[0]++);
+        assertThat(read[0], is(buffer.reads()));
+        assertThat(read[0], is(buffer.writes()));
+    }
+
+    @Test(dataProvider = "buffer")
+    public void submitAndDrain(BoundedBuffer<String> buffer) {
+        Lock lock = new ReentrantLock();
+        AtomicInteger reads = new AtomicInteger();
+        ConcurrentTestHarness.timeTasks(10, () -> {
+            for (int i = 0; i < 1000; i++) {
+                boolean shouldDrain = buffer.submit(DUMMY);
+                if (shouldDrain && lock.tryLock()) {
+                    buffer.drain(e -> reads.incrementAndGet());
+                    lock.unlock();
+                }
+                Thread.yield();
+            }
+        });
+        buffer.drain(e -> reads.incrementAndGet());
+        assertThat(reads.intValue(), is(buffer.reads()));
+        assertThat(reads.intValue(), is(buffer.writes()));
+    }
 }

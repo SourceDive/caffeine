@@ -15,19 +15,17 @@
  */
 package com.github.benmanes.caffeine;
 
-import java.util.Arrays;
-import java.util.concurrent.ThreadLocalRandom;
-
+import com.github.benmanes.caffeine.base.UnsafeAccess;
 import net.openhft.koloboke.collect.impl.hash.LHashSeparateKVLongIntMapFactoryImpl;
 import net.openhft.koloboke.collect.map.hash.HashLongIntMap;
 import net.openhft.koloboke.collect.map.hash.HashLongIntMapFactory;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import com.github.benmanes.caffeine.base.UnsafeAccess;
+import java.util.Arrays;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * A comparison of different lookup approaches for indexes for a slot in a fixed-sized shared array.
@@ -51,132 +49,132 @@ import com.github.benmanes.caffeine.base.UnsafeAccess;
  */
 @State(Scope.Benchmark)
 public class SlotLookupBenchmark {
-  static final int ARENA_SIZE = 2 << 6;
-  static final int SPARSE_SIZE = 2 << 14;
+    static final int ARENA_SIZE = 2 << 6;
+    static final int SPARSE_SIZE = 2 << 14;
 
-  ThreadLocal<Integer> threadLocal;
-  long element;
-  long[] array;
+    ThreadLocal<Integer> threadLocal;
+    long element;
+    long[] array;
 
-  long probeOffset;
+    long probeOffset;
 
-  long index;
-  HashLongIntMap mapping;
+    long index;
+    HashLongIntMap mapping;
 
-  int[] sparse;
+    int[] sparse;
 
-  @Setup
-  public void setupThreadLocal() {
-    threadLocal = ThreadLocal.withInitial(() -> {
-      for (int i = 0; i < ARENA_SIZE; i++) {
-        // Populates the internal hashmap to emulate other thread local usages
-        ThreadLocal.withInitial(() -> Thread.currentThread().getId());
-      }
-      return selectSlot(ThreadLocalRandom.current().nextInt());
-    });
-  }
-
-  @Setup
-  public void setupBinarySearch() {
-    array = new long[ARENA_SIZE];
-    element = ThreadLocalRandom.current().nextLong(ARENA_SIZE);
-    for (int i = 0; i < ARENA_SIZE; i++) {
-      array[i] = selectSlot(i);
+    @Setup
+    public void setupThreadLocal() {
+        threadLocal = ThreadLocal.withInitial(() -> {
+            for (int i = 0; i < ARENA_SIZE; i++) {
+                // Populates the internal hashmap to emulate other thread local usages
+                ThreadLocal.withInitial(() -> Thread.currentThread().getId());
+            }
+            return selectSlot(ThreadLocalRandom.current().nextInt());
+        });
     }
-    Arrays.sort(array);
-  }
 
-  @Setup
-  public void setupStriped64() {
-    probeOffset = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
-  }
-
-  @Setup
-  public void setupHashing() {
-    long[] keys = new long[ARENA_SIZE];
-    int[] values = new int[ARENA_SIZE];
-    for (int i = 0; i < ARENA_SIZE; i++) {
-      keys[i] = i;
-      values[i] = selectSlot(i);
+    @Setup
+    public void setupBinarySearch() {
+        array = new long[ARENA_SIZE];
+        element = ThreadLocalRandom.current().nextLong(ARENA_SIZE);
+        for (int i = 0; i < ARENA_SIZE; i++) {
+            array[i] = selectSlot(i);
+        }
+        Arrays.sort(array);
     }
-    HashLongIntMapFactory factory = new LHashSeparateKVLongIntMapFactoryImpl();
-    mapping = factory.newImmutableMap(keys, values);
-    index = ThreadLocalRandom.current().nextInt(ARENA_SIZE);
-  }
 
-  @Setup
-  public void setupSparseArray() {
-    sparse = new int[SPARSE_SIZE];
-    for (int i = 0; i < SPARSE_SIZE; i++) {
-      sparse[i] = selectSlot(i);
+    @Setup
+    public void setupStriped64() {
+        probeOffset = UnsafeAccess.objectFieldOffset(Thread.class, "threadLocalRandomProbe");
     }
-  }
 
-  @Benchmark
-  public int threadLocal() {
-    // Emulates holding the arena slot in a thread-local
-    return threadLocal.get();
-  }
-
-  @Benchmark
-  public int binarySearch() {
-    // Emulates finding the arena slot by a COW mapping of thread ids
-    return Arrays.binarySearch(array, element);
-  }
-
-  @Benchmark
-  public int hashing() {
-    // Emulates finding the arena slot by a COW mapping the thread id to a slot index
-    return mapping.get(index);
-  }
-
-  @Benchmark
-  public int sparseArray() {
-    // Emulates having a COW sparse array mapping the thread id to a slot location
-    return sparse[(int) Thread.currentThread().getId()];
-  }
-
-  @Benchmark
-  public int threadIdHash() {
-    // Emulates finding the arena slot by hashing the thread id
-    long id = Thread.currentThread().getId();
-    int hash = (((int) (id ^ (id >>> 32))) ^ 0x811c9dc5) * 0x01000193;
-    return selectSlot(hash);
-  }
-
-  @Benchmark
-  public int threadHashCode() {
-    // Emulates finding the arena slot by the thread's hashCode
-    long id = Thread.currentThread().hashCode();
-    int hash = (((int) (id ^ (id >>> 32))) ^ 0x811c9dc5) * 0x01000193;
-    return selectSlot(hash);
-  }
-
-  @Benchmark
-  public long striped64() {
-    // Emulates finding the arena slot by reusing the thread-local random seed (j.u.c.a.Striped64)
-    int hash = getProbe();
-    if (hash == 0) {
-      ThreadLocalRandom.current(); // force initialization
-      hash = getProbe();
+    @Setup
+    public void setupHashing() {
+        long[] keys = new long[ARENA_SIZE];
+        int[] values = new int[ARENA_SIZE];
+        for (int i = 0; i < ARENA_SIZE; i++) {
+            keys[i] = i;
+            values[i] = selectSlot(i);
+        }
+        HashLongIntMapFactory factory = new LHashSeparateKVLongIntMapFactoryImpl();
+        mapping = factory.newImmutableMap(keys, values);
+        index = ThreadLocalRandom.current().nextInt(ARENA_SIZE);
     }
-    advanceProbe(hash);
-    int index = selectSlot(hash);
-    return array[index];
-  }
 
-  private int getProbe() {
-    return UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), probeOffset);
-  }
+    @Setup
+    public void setupSparseArray() {
+        sparse = new int[SPARSE_SIZE];
+        for (int i = 0; i < SPARSE_SIZE; i++) {
+            sparse[i] = selectSlot(i);
+        }
+    }
 
-  private void advanceProbe(int probe) {
-    probe ^= probe << 13; // xorshift
-    probe ^= probe >>> 17;
-    probe ^= probe << 5;
-    UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), probeOffset, probe);
-  }
+    @Benchmark
+    public int threadLocal() {
+        // Emulates holding the arena slot in a thread-local
+        return threadLocal.get();
+    }
 
-  private static int selectSlot(int i) {
-    return i & (ARENA_SIZE - 1);
-  }
+    @Benchmark
+    public int binarySearch() {
+        // Emulates finding the arena slot by a COW mapping of thread ids
+        return Arrays.binarySearch(array, element);
+    }
+
+    @Benchmark
+    public int hashing() {
+        // Emulates finding the arena slot by a COW mapping the thread id to a slot index
+        return mapping.get(index);
+    }
+
+    @Benchmark
+    public int sparseArray() {
+        // Emulates having a COW sparse array mapping the thread id to a slot location
+        return sparse[(int) Thread.currentThread().getId()];
+    }
+
+    @Benchmark
+    public int threadIdHash() {
+        // Emulates finding the arena slot by hashing the thread id
+        long id = Thread.currentThread().getId();
+        int hash = (((int) (id ^ (id >>> 32))) ^ 0x811c9dc5) * 0x01000193;
+        return selectSlot(hash);
+    }
+
+    @Benchmark
+    public int threadHashCode() {
+        // Emulates finding the arena slot by the thread's hashCode
+        long id = Thread.currentThread().hashCode();
+        int hash = (((int) (id ^ (id >>> 32))) ^ 0x811c9dc5) * 0x01000193;
+        return selectSlot(hash);
+    }
+
+    @Benchmark
+    public long striped64() {
+        // Emulates finding the arena slot by reusing the thread-local random seed (j.u.c.a.Striped64)
+        int hash = getProbe();
+        if (hash == 0) {
+            ThreadLocalRandom.current(); // force initialization
+            hash = getProbe();
+        }
+        advanceProbe(hash);
+        int index = selectSlot(hash);
+        return array[index];
+    }
+
+    private int getProbe() {
+        return UnsafeAccess.UNSAFE.getInt(Thread.currentThread(), probeOffset);
+    }
+
+    private void advanceProbe(int probe) {
+        probe ^= probe << 13; // xorshift
+        probe ^= probe >>> 17;
+        probe ^= probe << 5;
+        UnsafeAccess.UNSAFE.putInt(Thread.currentThread(), probeOffset, probe);
+    }
+
+    private static int selectSlot(int i) {
+        return i & (ARENA_SIZE - 1);
+    }
 }

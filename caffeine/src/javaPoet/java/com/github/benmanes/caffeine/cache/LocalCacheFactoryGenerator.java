@@ -15,37 +15,21 @@
  */
 package com.github.benmanes.caffeine.cache;
 
-import static com.github.benmanes.caffeine.cache.Specifications.BOUNDED_LOCAL_CACHE;
-import static com.github.benmanes.caffeine.cache.Specifications.BUILDER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.CACHE_LOADER_PARAM;
-import static com.github.benmanes.caffeine.cache.Specifications.kTypeVar;
-import static com.github.benmanes.caffeine.cache.Specifications.vTypeVar;
-import static java.util.Objects.requireNonNull;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Year;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
-
-import javax.lang.model.element.Modifier;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.*;
+
+import javax.lang.model.element.Modifier;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Year;
+import java.util.*;
+
+import static com.github.benmanes.caffeine.cache.Specifications.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Generates a factory that creates the cache optimized for the user specified configuration.
@@ -53,144 +37,146 @@ import com.squareup.javapoet.TypeSpec;
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class LocalCacheFactoryGenerator {
-  final Feature[] featureByIndex = new Feature[] { null, null,
-      Feature.LOADING, Feature.LISTENING, Feature.EXECUTOR, Feature.STATS, Feature.MAXIMUM_SIZE,
-      Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
-  };
-  final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
-  final Path directory;
+    final Feature[] featureByIndex = new Feature[]{null, null,
+            Feature.LOADING, Feature.LISTENING, Feature.EXECUTOR, Feature.STATS, Feature.MAXIMUM_SIZE,
+            Feature.MAXIMUM_WEIGHT, Feature.EXPIRE_ACCESS, Feature.EXPIRE_WRITE, Feature.REFRESH_WRITE,
+    };
+    final NavigableMap<String, ImmutableSet<Feature>> classNameToFeatures;
+    final Path directory;
 
-  TypeSpec.Builder factory;
+    TypeSpec.Builder factory;
 
-  public LocalCacheFactoryGenerator(Path directory) {
-    this.directory = requireNonNull(directory);
-    this.classNameToFeatures = new TreeMap<>();
-  }
+    public LocalCacheFactoryGenerator(Path directory) {
+        this.directory = requireNonNull(directory);
+        this.classNameToFeatures = new TreeMap<>();
+    }
 
-  void generate() throws IOException {
-    factory = TypeSpec.classBuilder("LocalCacheFactory")
-        .addModifiers(Modifier.FINAL)
-        .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
-        .addMember("value", "{$S, $S}", "unchecked", "unused")
-        .build());
-    addClassJavaDoc();
-    generateLocalCaches();
+    void generate() throws IOException {
+        factory = TypeSpec.classBuilder("LocalCacheFactory")
+                .addModifiers(Modifier.FINAL)
+                .addAnnotation(AnnotationSpec.builder(SuppressWarnings.class)
+                        .addMember("value", "{$S, $S}", "unchecked", "unused")
+                        .build());
+        addClassJavaDoc();
+        generateLocalCaches();
 
-    addFactoryMethods();
-    writeJavaFile();
-  }
+        addFactoryMethods();
+        writeJavaFile();
+    }
 
-  private void addFactoryMethods() {
-    factory.addMethod(newBoundedLocalCache());
-  }
+    private void addFactoryMethods() {
+        factory.addMethod(newBoundedLocalCache());
+    }
 
-  private MethodSpec newBoundedLocalCache() {
-    Preconditions.checkState(!classNameToFeatures.isEmpty(), "Must generate all cache types first");
-    return MethodSpec.methodBuilder("newBoundedLocalCache")
-        .addTypeVariable(kTypeVar)
-        .addTypeVariable(vTypeVar)
-        .returns(BOUNDED_LOCAL_CACHE)
-        .addModifiers(Modifier.STATIC)
-        .addCode(CacheSelectorCode.get(classNameToFeatures.keySet()))
-        .addParameter(BUILDER_PARAM)
-        .addParameter(CACHE_LOADER_PARAM)
-        .addParameter(boolean.class, "async")
-        .addJavadoc("Returns a cache optimized for this configuration.\n")
-        .build();
-  }
+    private MethodSpec newBoundedLocalCache() {
+        Preconditions.checkState(!classNameToFeatures.isEmpty(), "Must generate all cache types first");
+        return MethodSpec.methodBuilder("newBoundedLocalCache")
+                .addTypeVariable(kTypeVar)
+                .addTypeVariable(vTypeVar)
+                .returns(BOUNDED_LOCAL_CACHE)
+                .addModifiers(Modifier.STATIC)
+                .addCode(CacheSelectorCode.get(classNameToFeatures.keySet()))
+                .addParameter(BUILDER_PARAM)
+                .addParameter(CACHE_LOADER_PARAM)
+                .addParameter(boolean.class, "async")
+                .addJavadoc("Returns a cache optimized for this configuration.\n")
+                .build();
+    }
 
-  private void writeJavaFile() throws IOException {
-    JavaFile.builder(getClass().getPackage().getName(), factory.build())
-        .addFileComment("Copyright $L Ben Manes. All Rights Reserved.", Year.now())
-        .indent("  ")
-        .build()
-        .writeTo(directory);
-  }
+    private void writeJavaFile() throws IOException {
+        JavaFile.builder(getClass().getPackage().getName(), factory.build())
+                .addFileComment("Copyright $L Ben Manes. All Rights Reserved.", Year.now())
+                .indent("  ")
+                .build()
+                .writeTo(directory);
+    }
 
-  private void generateLocalCaches() {
-    fillClassNameToFeatures();
-    classNameToFeatures.entrySet().stream().forEach(entry -> {
-      String className = entry.getKey();
-      String higherKey = classNameToFeatures.higherKey(className);
-      boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
-      addLocalCacheSpec(entry.getKey(), isLeaf, entry.getValue());
-    });
-  }
+    private void generateLocalCaches() {
+        fillClassNameToFeatures();
+        classNameToFeatures.entrySet().stream().forEach(entry -> {
+            String className = entry.getKey();
+            String higherKey = classNameToFeatures.higherKey(className);
+            boolean isLeaf = (higherKey == null) || !higherKey.startsWith(className);
+            addLocalCacheSpec(entry.getKey(), isLeaf, entry.getValue());
+        });
+    }
 
-  private void fillClassNameToFeatures() {
-    for (List<Object> combination : combinations()) {
-      Set<Feature> features = new LinkedHashSet<>();
+    private void fillClassNameToFeatures() {
+        for (List<Object> combination : combinations()) {
+            Set<Feature> features = new LinkedHashSet<>();
 
-      features.add(((Boolean) combination.get(0)) ? Feature.STRONG_KEYS : Feature.WEAK_KEYS);
-      features.add(((Boolean) combination.get(1)) ? Feature.STRONG_VALUES : Feature.INFIRM_VALUES);
-      for (int i = 2; i < combination.size(); i++) {
-        if ((Boolean) combination.get(i)) {
-          features.add(featureByIndex[i]);
+            features.add(((Boolean) combination.get(0)) ? Feature.STRONG_KEYS : Feature.WEAK_KEYS);
+            features.add(((Boolean) combination.get(1)) ? Feature.STRONG_VALUES : Feature.INFIRM_VALUES);
+            for (int i = 2; i < combination.size(); i++) {
+                if ((Boolean) combination.get(i)) {
+                    features.add(featureByIndex[i]);
+                }
+            }
+            if (features.contains(Feature.MAXIMUM_WEIGHT)) {
+                features.remove(Feature.MAXIMUM_SIZE);
+            }
+
+            String className = encode(Feature.makeClassName(features));
+            classNameToFeatures.put(className, ImmutableSet.copyOf(features));
         }
-      }
-      if (features.contains(Feature.MAXIMUM_WEIGHT)) {
-        features.remove(Feature.MAXIMUM_SIZE);
-      }
-
-      String className = encode(Feature.makeClassName(features));
-      classNameToFeatures.put(className, ImmutableSet.copyOf(features));
     }
-  }
 
-  private Set<List<Object>> combinations() {
-    Set<Boolean> options = ImmutableSet.of(true, false);
-    List<Set<Boolean>> sets = new ArrayList<>();
-    for (int i = 0; i < featureByIndex.length; i++) {
-      sets.add(options);
+    private Set<List<Object>> combinations() {
+        Set<Boolean> options = ImmutableSet.of(true, false);
+        List<Set<Boolean>> sets = new ArrayList<>();
+        for (int i = 0; i < featureByIndex.length; i++) {
+            sets.add(options);
+        }
+        return Sets.cartesianProduct(sets);
     }
-    return Sets.cartesianProduct(sets);
-  }
 
-  private void addLocalCacheSpec(String className, boolean isFinal, Set<Feature> features) {
-    TypeName superClass;
-    Set<Feature> parentFeatures;
-    Set<Feature> generateFeatures;
-    if (features.size() == 2) {
-      parentFeatures = ImmutableSet.of();
-      generateFeatures = features;
-      superClass = BOUNDED_LOCAL_CACHE;
-    } else {
-      parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
-      generateFeatures = ImmutableSet.of(Iterables.getLast(features));
-      superClass = ParameterizedTypeName.get(ClassName.bestGuess(
-          encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
+    private void addLocalCacheSpec(String className, boolean isFinal, Set<Feature> features) {
+        TypeName superClass;
+        Set<Feature> parentFeatures;
+        Set<Feature> generateFeatures;
+        if (features.size() == 2) {
+            parentFeatures = ImmutableSet.of();
+            generateFeatures = features;
+            superClass = BOUNDED_LOCAL_CACHE;
+        } else {
+            parentFeatures = ImmutableSet.copyOf(Iterables.limit(features, features.size() - 1));
+            generateFeatures = ImmutableSet.of(Iterables.getLast(features));
+            superClass = ParameterizedTypeName.get(ClassName.bestGuess(
+                    encode(Feature.makeClassName(parentFeatures))), kTypeVar, vTypeVar);
+        }
+        LocalCacheGenerator generator = new LocalCacheGenerator(
+                superClass, className, isFinal, parentFeatures, generateFeatures);
+        factory.addType(generator.generate());
     }
-    LocalCacheGenerator generator = new LocalCacheGenerator(
-        superClass, className, isFinal, parentFeatures, generateFeatures);
-    factory.addType(generator.generate());
-  }
 
-  private void addClassJavaDoc() {
-    factory.addJavadoc("<em>WARNING: GENERATED CODE</em>\n\n")
-        .addJavadoc("A factory for caches optimized for a particular configuration.\n")
-        .addJavadoc("\n@author ben.manes@gmail.com (Ben Manes)\n");
-  }
+    private void addClassJavaDoc() {
+        factory.addJavadoc("<em>WARNING: GENERATED CODE</em>\n\n")
+                .addJavadoc("A factory for caches optimized for a particular configuration.\n")
+                .addJavadoc("\n@author ben.manes@gmail.com (Ben Manes)\n");
+    }
 
-  /** Returns an encoded form of the class name for compact use. */
-  private static String encode(String className) {
-    return Feature.makeEnumName(className)
-        .replaceFirst("STRONG_KEYS", "S")
-        .replaceFirst("WEAK_KEYS", "W")
-        .replaceFirst("_STRONG_VALUES", "S")
-        .replaceFirst("_INFIRM_VALUES", "I")
-        .replaceFirst("_LOADING", "Lo")
-        .replaceFirst("_LISTENING", "Li")
-        .replaceFirst("_EXECUTOR", "E")
-        .replaceFirst("_STATS", "S")
-        .replaceFirst("_MAXIMUM", "M")
-        .replaceFirst("_WEIGHT", "W")
-        .replaceFirst("_SIZE", "S")
-        .replaceFirst("_EXPIRE_ACCESS", "A")
-        .replaceFirst("_EXPIRE_WRITE", "W")
-        .replaceFirst("_REFRESH_WRITE", "R");
-  }
+    /**
+     * Returns an encoded form of the class name for compact use.
+     */
+    private static String encode(String className) {
+        return Feature.makeEnumName(className)
+                .replaceFirst("STRONG_KEYS", "S")
+                .replaceFirst("WEAK_KEYS", "W")
+                .replaceFirst("_STRONG_VALUES", "S")
+                .replaceFirst("_INFIRM_VALUES", "I")
+                .replaceFirst("_LOADING", "Lo")
+                .replaceFirst("_LISTENING", "Li")
+                .replaceFirst("_EXECUTOR", "E")
+                .replaceFirst("_STATS", "S")
+                .replaceFirst("_MAXIMUM", "M")
+                .replaceFirst("_WEIGHT", "W")
+                .replaceFirst("_SIZE", "S")
+                .replaceFirst("_EXPIRE_ACCESS", "A")
+                .replaceFirst("_EXPIRE_WRITE", "W")
+                .replaceFirst("_REFRESH_WRITE", "R");
+    }
 
-  public static void main(String[] args) throws IOException {
-    new LocalCacheFactoryGenerator(Paths.get(args[0])).generate();
-  }
+    public static void main(String[] args) throws IOException {
+        new LocalCacheFactoryGenerator(Paths.get(args[0])).generate();
+    }
 }

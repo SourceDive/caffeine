@@ -15,52 +15,51 @@
  */
 package com.github.benmanes.caffeine.cache.buffer;
 
-import java.util.concurrent.locks.Lock;
-
+import com.github.benmanes.caffeine.locks.NonReentrantLock;
 import org.jctools.queues.MpscArrayQueue;
 
-import com.github.benmanes.caffeine.locks.NonReentrantLock;
+import java.util.concurrent.locks.Lock;
 
 /**
  * @author ben.manes@gmail.com (Ben Manes)
  */
 public final class MpscArrayBuffer implements Buffer {
-  private final MpscArrayQueue<Boolean> queue;
-  private final Lock evictionLock;
-  private long drained;
+    private final MpscArrayQueue<Boolean> queue;
+    private final Lock evictionLock;
+    private long drained;
 
-  public MpscArrayBuffer() {
-    evictionLock = new NonReentrantLock();
-    queue = new MpscArrayQueue<>(MAX_SIZE);
-  }
-
-  @Override
-  public boolean record() {
-    return queue.weakOffer(Boolean.TRUE) == 0;
-  }
-
-  @Override
-  public void drain() {
-    if (evictionLock.tryLock()) {
-      while (queue.poll() != null) {
-        drained++;
-      }
-      evictionLock.unlock();
+    public MpscArrayBuffer() {
+        evictionLock = new NonReentrantLock();
+        queue = new MpscArrayQueue<>(MAX_SIZE);
     }
-  }
 
-  @Override
-  public long recorded() {
-    return drained() + queue.size();
-  }
-
-  @Override
-  public long drained() {
-    evictionLock.lock();
-    try {
-      return drained;
-    } finally {
-      evictionLock.unlock();
+    @Override
+    public boolean record() {
+        return queue.weakOffer(Boolean.TRUE) == 0;
     }
-  }
+
+    @Override
+    public void drain() {
+        if (evictionLock.tryLock()) {
+            while (queue.poll() != null) {
+                drained++;
+            }
+            evictionLock.unlock();
+        }
+    }
+
+    @Override
+    public long recorded() {
+        return drained() + queue.size();
+    }
+
+    @Override
+    public long drained() {
+        evictionLock.lock();
+        try {
+            return drained;
+        } finally {
+            evictionLock.unlock();
+        }
+    }
 }
