@@ -24,6 +24,7 @@ import javax.annotation.concurrent.Immutable;
 import java.util.Objects;
 
 /**
+ * <p>缓存性能统计信息。</p>
  * Statistics about the performance of a {@link Cache}.
  * <p>
  * Cache statistics are incremented according to the following rules:
@@ -57,8 +58,8 @@ import java.util.Objects;
  */
 @Immutable
 public final class CacheStats {
-    private final long hitCount;
-    private final long missCount;
+    private final long hitCount; // 命中次数
+    private final long missCount; // 未命中次数
     private final long loadSuccessCount;
     private final long loadFailureCount;
     private final long totalLoadTime;
@@ -93,6 +94,7 @@ public final class CacheStats {
     }
 
     /**
+     * <p>请求次数=命中次数+未命中次数。</p>
      * Returns the number of times {@link Cache} lookup methods have returned either a cached or
      * uncached value. This is defined as {@code hitCount + missCount}.
      *
@@ -104,6 +106,7 @@ public final class CacheStats {
     }
 
     /**
+     * <p>获取命中次数</p>
      * Returns the number of times {@link Cache} lookup methods have returned a cached value.
      *
      * @return the number of times {@link Cache} lookup methods have returned a cached value
@@ -114,6 +117,7 @@ public final class CacheStats {
     }
 
     /**
+     * <p>命中率</p>
      * Returns the ratio of cache requests which were hits. This is defined as
      * {@code hitCount / requestCount}, or {@code 1.0} when {@code requestCount == 0}. Note that
      * {@code hitRate + missRate =~ 1.0}.
@@ -127,6 +131,7 @@ public final class CacheStats {
     }
 
     /**
+     * <p>获取未命中次数。</p>
      * Returns the number of times {@link Cache} lookup methods have returned an uncached (newly
      * loaded) value, or null. Multiple concurrent calls to {@link Cache} lookup methods on an absent
      * value can result in multiple misses, all returning the results of a single cache load
@@ -225,6 +230,7 @@ public final class CacheStats {
     }
 
     /**
+     * <p>平均加载时间。</p>
      * Returns the average time spent loading new values. This is defined as
      * {@code totalLoadTime / (loadSuccessCount + loadFailureCount)}.
      *

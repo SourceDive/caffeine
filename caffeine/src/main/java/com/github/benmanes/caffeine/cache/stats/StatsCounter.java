@@ -31,6 +31,7 @@ import javax.annotation.concurrent.ThreadSafe;
 public interface StatsCounter {
 
     /**
+     * <p>记录缓存命中数量。</p>
      * Records cache hits. This should be called when a cache request returns a cached value.
      *
      * @param count the number of hits to record
@@ -38,6 +39,7 @@ public interface StatsCounter {
     void recordHits(@Nonnegative int count);
 
     /**
+     * <p>记录缓存未命中数量。</p>
      * Records cache misses. This should be called when a cache request returns a value that was not
      * found in the cache. This method should be called by the loading thread, as well as by threads
      * blocking on the load. Multiple concurrent calls to {@link Cache} lookup methods with the same

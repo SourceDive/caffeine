@@ -41,6 +41,8 @@ import java.util.function.Function;
 public interface Cache<K, V> {
 
     /**
+     * <p>key存在，直接返回value</p>
+     * <p>key不存在，返回null.</p>
      * Returns the value associated with {@code key} in this cache, or {@code null} if there is no
      * cached value for {@code key}.
      *
@@ -53,6 +55,8 @@ public interface Cache<K, V> {
     V getIfPresent(@Nonnull Object key);
 
     /**
+     * <p>键存在，直接返回</p>
+     * <p>键不存在，通过给定的函数进行加载。</p>
      * Returns the value associated with {@code key} in this cache, obtaining that value from
      * {@code mappingFunction} if necessary. This method provides a simple substitute for the
      * conventional "if cached, return; otherwise create, cache and return" pattern.
@@ -114,6 +118,7 @@ public interface Cache<K, V> {
     void putAll(@Nonnull Map<? extends K, ? extends V> map);
 
     /**
+     * <p>移除缓存。</p>
      * Discards any cached value for key {@code key}.
      *
      * @param key key whose mapping is to be removed from the cache
@@ -122,6 +127,7 @@ public interface Cache<K, V> {
     void invalidate(@Nonnull Object key);
 
     /**
+     * <p>批量移除。</p>
      * Discards any cached values for keys {@code keys}.
      *
      * @param keys the keys whose associated values are to be removed
@@ -130,6 +136,7 @@ public interface Cache<K, V> {
     void invalidateAll(@Nonnull Iterable<?> keys);
 
     /**
+     * <p>移除所有的缓存。</p>
      * Discards all entries in the cache.
      */
     void invalidateAll();
@@ -146,6 +153,7 @@ public interface Cache<K, V> {
     long estimatedSize();
 
     /**
+     * <p>获取统计信息。</p>
      * Returns a current snapshot of this cache's cumulative statistics. All statistics are
      * initialized to zero, and are monotonically increasing over the lifetime of the cache.
      * <p>

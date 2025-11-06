@@ -246,6 +246,7 @@ public final class Caffeine<K, V> {
     }
 
     /**
+     * <p>最大条数。</p>
      * Specifies the maximum number of entries the cache may contain. Note that the cache <b>may evict
      * an entry before this limit is exceeded</b>. As the cache size grows close to the maximum, the
      * cache evicts entries that are less likely to be used again. For example, the cache may evict an
@@ -469,6 +470,7 @@ public final class Caffeine<K, V> {
     }
 
     /**
+     * <p>写入后过期。</p>
      * Specifies that each entry should be automatically removed from the cache once a fixed duration
      * has elapsed after the entry's creation, or the most recent replacement of its value.
      * <p>
@@ -502,6 +504,7 @@ public final class Caffeine<K, V> {
     }
 
     /**
+     * <p>访问后过期</p>
      * Specifies that each entry should be automatically removed from the cache once a fixed duration
      * has elapsed after the entry's creation, the most recent replacement of its value, or its last
      * read. Access time is reset by all cache read and write operations (including
@@ -538,6 +541,7 @@ public final class Caffeine<K, V> {
     }
 
     /**
+     * <p>设置刷新时间。</p>
      * Specifies that active entries are eligible for automatic refresh once a fixed duration has
      * elapsed after the entry's creation, or the most recent replacement of its value. The semantics
      * of refreshes are specified in {@link LoadingCache#refresh}, and are performed by calling
@@ -652,6 +656,7 @@ public final class Caffeine<K, V> {
     }
 
     /**
+     * <p>启用统计信息。</p>
      * Enable the accumulation of {@link CacheStats} during the operation of the cache. Without this
      * {@link Cache#stats} will return zero for all statistics. Note that recording stats requires
      * bookkeeping to be performed with each operation, and thus imposes a performance penalty on

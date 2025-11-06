@@ -100,7 +100,8 @@ abstract class BoundedLocalCache<K, V> extends AbstractMap<K, V> implements Loca
 
     static final Logger logger = Logger.getLogger(BoundedLocalCache.class.getName());
 
-    // The backing data store holding the key-value associations
+    // The backing data store holding the key-value associations 存储键值映射的底层数据存储。
+    // 存放缓存键值的集合。
     final ConcurrentHashMap<Object, Node<K, V>> data;
 
     // The factory for creating cache entries
