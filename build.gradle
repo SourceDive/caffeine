@@ -6,7 +6,10 @@ buildscript {
   apply from: "${rootDir}/gradle/dependencies.gradle"
 
   repositories {
-    jcenter()
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    maven { url 'https://maven.aliyun.com/repository/central' }
+    maven { url 'https://maven.aliyun.com/repository/jcenter' }
+    mavenCentral()
   }
 
   dependencies {
@@ -62,7 +65,10 @@ subprojects { proj ->
   archivesBaseName = path[1..-1].replaceAll(':', '-').toLowerCase()
 
   repositories {
-    jcenter()
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    maven { url 'https://maven.aliyun.com/repository/central' }
+    maven { url 'https://maven.aliyun.com/repository/jcenter' }
+    mavenCentral()
   }
   
   configurations {
@@ -87,7 +93,10 @@ subprojects { proj ->
 }
 
 repositories {
-  jcenter()
+  maven { url 'https://maven.aliyun.com/repository/public' }
+  maven { url 'https://maven.aliyun.com/repository/central' }
+  maven { url 'https://maven.aliyun.com/repository/jcenter' }
+  mavenCentral()
 }
 
 // Only report code coverage for projects that are distrubuted
