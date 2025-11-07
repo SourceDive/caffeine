@@ -25,6 +25,7 @@ import java.util.concurrent.locks.Lock;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * <p>不支持重入的排他锁。</p>
  * A non-reentrant mutual exclusion {@link Lock}. This type of lock does not allow recursive locks
  * held by the same thread and will deadlock if used recursively. This type of lock is useful when
  * reentrancy is not required and a slim lock is desired.
@@ -67,6 +68,7 @@ public class NonReentrantLock implements Lock, Serializable {
     static final long serialVersionUID = 1L;
 
     /**
+     * <p>同步器。</p>
      * Synchronizer providing all implementation mechanics
      */
     final Sync sync;
@@ -106,6 +108,7 @@ public class NonReentrantLock implements Lock, Serializable {
     }
 
     /**
+     * <p>当前线程持有锁，返回true.</p>
      * Queries if this lock is held by the current thread.
      * <p>
      * Analogous to the {@link Thread#holdsLock(Object)} method for built-in monitor locks, this
@@ -158,6 +161,7 @@ public class NonReentrantLock implements Lock, Serializable {
     }
 
     /**
+     * <p>是否有线程持有锁。</p>
      * Queries if this lock is held by any thread. This method is designed for use in monitoring of
      * the system state, not for synchronization control.
      *
@@ -168,6 +172,8 @@ public class NonReentrantLock implements Lock, Serializable {
     }
 
     /**
+     * <p>获取当前持有锁的线程。</p>
+     * <p>如果锁不被任何线程持有，返回null.</p>
      * Returns the thread that currently owns this lock, or {@code null} if not owned. When this
      * method is called by a thread that is not the owner, the return value reflects a best-effort
      * approximation of current lock status. For example, the owner may be momentarily {@code null}
@@ -182,6 +188,7 @@ public class NonReentrantLock implements Lock, Serializable {
     }
 
     /**
+     * <p>是否有排队的线程在等待获取锁。</p>
      * Queries whether any threads are waiting to acquire this lock. Note that because cancellations
      * may occur at any time, a {@code true} return does not guarantee that any other thread will ever
      * acquire this lock. This method is designed primarily for use in monitoring of the system state.
@@ -193,6 +200,7 @@ public class NonReentrantLock implements Lock, Serializable {
     }
 
     /**
+     * <p>给定的线程是否在等待获取锁。</p>
      * Queries whether the given thread is waiting to acquire this lock. Note that because
      * cancellations may occur at any time, a {@code true} return does not guarantee that this thread
      * will ever acquire this lock. This method is designed primarily for use in monitoring of the
@@ -207,6 +215,7 @@ public class NonReentrantLock implements Lock, Serializable {
     }
 
     /**
+     * <p>等待获取锁的线程数量。</p>
      * Returns an estimate of the number of threads waiting to acquire this lock. The value is only an
      * estimate because the number of threads may change dynamically while this method traverses
      * internal data structures. This method is designed for use in monitoring of the system state,
@@ -379,7 +388,7 @@ public class NonReentrantLock implements Lock, Serializable {
         private void readObject(java.io.ObjectInputStream s)
                 throws java.io.IOException, ClassNotFoundException {
             s.defaultReadObject();
-            setState(0); // reset to unlocked state
+            setState(0); // reset to unlocked state 重置同步器状态。
         }
     }
 }

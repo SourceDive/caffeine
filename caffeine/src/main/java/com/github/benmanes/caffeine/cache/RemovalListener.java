@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
+ * <p>元素移除时的监听器。</p>
  * An object that can receive a notification when an entry is removed from a cache. The removal
  * resulting in notification could have occurred to an entry being manually removed or replaced, or
  * due to eviction resulting from timed expiration, exceeding a maximum size, or garbage collection.
