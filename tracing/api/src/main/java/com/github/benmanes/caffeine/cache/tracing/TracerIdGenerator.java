@@ -70,7 +70,14 @@ public final class TracerIdGenerator {
   private static long getMachineId() {
     try {
       InetAddress ip = InetAddress.getLocalHost();
-      byte[] mac = NetworkInterface.getByInetAddress(ip).getHardwareAddress();
+      NetworkInterface networkInterface = NetworkInterface.getByInetAddress(ip);
+      if (networkInterface == null) {
+        return ThreadLocalRandom.current().nextLong(MAX_MACHINE_ID);
+      }
+      byte[] mac = networkInterface.getHardwareAddress();
+      if (mac == null || mac.length < 2) {
+        return ThreadLocalRandom.current().nextLong(MAX_MACHINE_ID);
+      }
       return ((0x000000FF & (long) mac[mac.length - 1])
           | (0x0000FF00 & (((long) mac[mac.length - 2]) << 8))) >> 6;
     } catch (SocketException | UnknownHostException e) {
